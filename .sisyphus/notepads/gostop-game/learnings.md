@@ -253,3 +253,38 @@ src/assets/sounds/
 
 ### Attribution
 Created ATTRIBUTION.md documenting all sound sources and licenses.
+
+## Image Processing (Task 2)
+
+### Wikimedia Commons Download
+- Used Wikimedia Commons API to get direct SVG file URLs
+- API endpoint: `https://commons.wikimedia.org/w/api.php?action=query&titles=File:FILENAME&prop=imageinfo&iiprop=url&format=json`
+- Downloaded 12 monthly Hwatu SVG files (Hwatu001.svg through Hwatu012.svg)
+- Each monthly file contains 4 cards in horizontal layout
+
+### ImageMagick SVG to PNG Conversion
+- Command: `convert input.svg -crop 4x1@ +repage -resize 150x225^ output_%d.png`
+- `-crop 4x1@` splits image into 4 equal horizontal sections
+- `+repage` resets virtual canvas after crop
+- `-resize 150x225^` ensures minimum dimensions (^ flag = fill, not fit)
+- `%d` in output filename creates numbered sequence (0, 1, 2, 3)
+- Warning about deprecated `convert` command (use `magick` in future)
+- Freetype warnings are non-critical and don't affect output
+
+### Card Naming Convention
+- Format: `{month}-{type}.png` (e.g., "january-gwang.png")
+- Multiple cards of same type: `{month}-{type}-{number}.png` (e.g., "january-pi-1.png")
+- Card types: gwang (광), bird (열끗), animal (열끗), hongdan (홍단), cheongdan (청단), chodan (초단), pi (피)
+- November has 3 pi cards (pi-1, pi-2, pi-3) instead of 4 total cards
+
+### Card Back Design
+- Created simple geometric pattern using ImageMagick
+- Command: `convert -size 150x225 xc:'#8B4513' -fill '#D2691E' -draw "rectangle 10,10 140,215" -fill '#A0522D' -draw "rectangle 20,20 130,205" card-back.png`
+- Brown color scheme to match traditional card aesthetic
+
+### Attribution Requirements
+- CC BY-SA 4.0 license requires attribution
+- Must credit author (Marcus Richert) and source (Wikimedia Commons)
+- Must include license URL and terms
+- Modifications (SVG→PNG, resizing) must be documented
+

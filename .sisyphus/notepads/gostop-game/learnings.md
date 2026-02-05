@@ -288,3 +288,268 @@ Created ATTRIBUTION.md documenting all sound sources and licenses.
 - Must include license URL and terms
 - Modifications (SVG→PNG, resizing) must be documented
 
+
+## 2026-02-05: Deck Creation and Shuffle Logic (Task 5)
+
+### TDD Workflow Execution
+- **RED phase**: Wrote 23 comprehensive tests covering all deck operations
+- **GREEN phase**: Implemented deck.ts with createDeck(), shuffle(), and dealCards() functions
+- **Verification**: All 40 tests pass (23 new + 17 existing), TypeScript clean, npm test passes
+
+### Deck Functions Implemented
+
+1. **createDeck()**: Returns fresh copy of CARDS constant
+   - Returns: Card[] (48 cards)
+   - Immutability: Creates new array reference, original CARDS unchanged
+   - Use case: Initialize game deck
+
+2. **shuffle(deck: Card[])**: Fisher-Yates shuffle algorithm
+   - Returns: New shuffled Card[] array
+   - Immutability: Original deck parameter never modified
+   - Algorithm: Copy array, then swap random elements from end to start
+   - Randomness: Uses Math.random() for true randomness (no fixed seed)
+
+3. **dealCards(deck: Card[])**: Distributes cards to players and field
+   - Returns: DealResult interface with playerHand, aiHand, field, deck
+   - Distribution: Player 10, AI 10, Field 8, Deck 20 (total 48)
+   - Immutability: Input deck never modified, all outputs are new arrays
+   - Process: Internally shuffles deck, then slices into distribution
+
+### Fisher-Yates Algorithm Details
+```typescript
+function shuffle(deck: Card[]): Card[] {
+  const shuffled = [...deck];  // Copy for immutability
+  
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled;
+}
+```
+- Time complexity: O(n)
+- Space complexity: O(n) for the copy
+- Unbiased: All permutations equally likely
+- Modern variant (Durstenfeld): Swap from end backwards
+
+### Test Coverage Strategy
+- **createDeck tests**: 5 tests covering array length, reference independence, uniqueness, property preservation
+- **shuffle tests**: 6 tests covering immutability, randomness, card integrity, reference independence
+- **dealCards tests**: 8 tests covering distribution (10+10+8+20), uniqueness, immutability, array references
+- **Integration tests**: 2 tests covering full workflow (create→shuffle→deal) and immutability chain
+- **Total**: 23 tests, all passing
+
+### Key Learnings
+
+1. **Immutability Pattern**: All functions use array spread operator [...array]
+   - Ensures original arrays never modified
+   - Enables functional programming style
+   - Makes testing easier (can verify original unchanged)
+
+2. **Randomness Testing**: Multiple shuffle calls should produce different results
+   - Test compares shuffled card ID sequences
+   - Very unlikely to be identical (probability ≈ 1/48!)
+   - Validates true randomness (not fixed seed)
+
+3. **Array Slicing**: dealCards uses slice() for distribution
+   - slice(0, 10): Player hand
+   - slice(10, 20): AI hand
+   - slice(20, 28): Field (8 cards)
+   - slice(28, 48): Remaining deck (20 cards)
+   - slice() returns new array (immutability preserved)
+
+4. **TypeScript Unused Variable Warnings**:
+   - Removed unused Card import (only used in type annotations)
+   - Removed unused dealt variable (function called but result not used)
+   - Kept necessary comments explaining probabilistic test behavior
+
+### DealResult Interface
+```typescript
+export interface DealResult {
+  playerHand: Card[];  // 10 cards
+  aiHand: Card[];      // 10 cards
+  field: Card[];       // 8 cards
+  deck: Card[];        // 20 cards
+}
+```
+
+### Verification Results
+```bash
+✓ 23 deck tests PASS
+✓ 17 card tests PASS (existing)
+✓ 3 example tests PASS (existing)
+✓ Total: 40 tests PASS
+✓ TypeScript compilation: PASS (no errors)
+✓ npm test: All tests PASS
+```
+
+### Files Created
+- `src/game/deck.ts`: 34 lines (3 functions + 1 interface)
+- `src/__tests__/deck.test.ts`: 217 lines (23 comprehensive tests)
+
+### Commit
+- Message: `feat(game): implement deck creation and shuffle logic`
+- Hash: a45fd72
+- Files: 2 changed, 251 insertions
+
+### Next Steps
+- Task 6 (Game State Management) will use dealCards() to initialize game state
+- Task 7 (Game Rules) will use shuffle() for card dealing during gameplay
+- Deck functions are pure and ready for integration with game logic
+
+
+## 2026-02-05: Game State Management with Turn-Based Phase System (Task 6)
+
+### TDD Workflow Execution
+- **RED phase**: Wrote 38 comprehensive tests covering all state management operations
+- **GREEN phase**: Implemented state.ts with GameState interface, Phase type, and all state functions
+- **Verification**: All 78 tests pass (38 new + 40 existing), TypeScript compilation clean
+
+### State Architecture Decisions
+
+1. **Phase Type**: Union type with 8 distinct phases
+   ```typescript
+   type Phase = 'waiting' | 'select-hand' | 'match-hand' | 'flip-deck' 
+              | 'match-deck' | 'check-score' | 'go-stop' | 'end';
+   ```
+   - Represents turn sequence in Go-Stop game
+   - Type-safe phase transitions (TypeScript enforces valid values)
+
+2. **GameState Interface**: Single source of truth for all game data
+   - Player/AI hands (10 cards each)
+   - Field (8 cards) and deck (20 cards)
+   - Capture piles (playerCapture, aiCapture)
+   - Turn tracking (currentTurn: 'player' | 'ai')
+   - Phase tracking (phase: Phase)
+   - Temporary state (selectedCard, flippedCard)
+   - Game metadata (goCount, shakingMultiplier, lastAction)
+
+3. **Immutability Pattern**: All state updates return new objects
+   - `updateState(state, updates)`: Shallow merge with spread operator
+   - Never mutate arrays or objects in place
+   - Enables time-travel debugging and undo/redo
+
+### Turn Sequence Implementation
+
+**Complete Turn Flow:**
+```
+waiting → select-hand → match-hand → flip-deck → match-deck → check-score
+  ↓ (if score < 7)
+  → switch turn → select-hand (opponent's turn)
+  
+  ↓ (if score >= 7)
+  → go-stop → end (stop) OR select-hand (go, switch turn)
+```
+
+**Key Functions:**
+- `advancePhase(state)`: Moves to next phase in sequence
+- `switchTurn(state)`: Toggles player/ai, resets phase to select-hand
+- `shouldEnterGoStopPhase(state)`: Checks if current player has 7+ points
+
+### Scoring Logic (Simplified for State Management)
+
+Implemented basic scoring to support go-stop phase logic:
+- **3 Gwang**: 7 points (triggers go-stop)
+- **4 Gwang**: 10 points
+- **5 Gwang**: 15 points
+- **5+ Yeol**: (count - 4) points
+- **5+ Tti**: (count - 4) points
+- **10+ Pi**: (count - 9) points
+
+**Note**: This is a simplified scoring system. Full scoring rules (including special combinations like 홍단, 청단, 초단) will be implemented in Task 9 (Scoring System).
+
+### Card Selection and Deck Flipping
+
+1. **selectCard(state, card)**: Removes card from playerHand, sets selectedCard
+   - Immutability: Creates new array without selected card
+   - Used in select-hand phase
+
+2. **flipDeckCard(state)**: Removes top card from deck, sets flippedCard
+   - Immutability: Uses array destructuring `[first, ...rest]`
+   - Used in flip-deck phase
+
+### Test Coverage Strategy
+
+**38 tests organized into 9 test suites:**
+1. Phase Type (1 test): Validates 8 phase values
+2. createInitialState (12 tests): All initial state properties
+3. State Immutability (3 tests): Ensures no mutations
+4. Turn Switching (4 tests): Player ↔ AI transitions
+5. Phase Transitions (6 tests): All phase advances
+6. Go-Stop Phase Logic (4 tests): 7+ point threshold
+7. Card Selection (3 tests): Hand card removal
+8. Deck Card Flipping (3 tests): Deck card removal
+9. Full Turn Sequence (2 tests): Complete turn flow
+
+### Key Learnings
+
+1. **Union Types for State Machines**: TypeScript union types are perfect for phase systems
+   - Compile-time validation of phase values
+   - Autocomplete in IDEs
+   - Prevents typos and invalid states
+
+2. **Immutability with Spread Operator**: Simple and effective pattern
+   ```typescript
+   return { ...state, phase: 'select-hand' };  // Shallow copy
+   return { ...state, playerHand: [...state.playerHand, card] };  // Deep copy arrays
+   ```
+
+3. **Phase Transition Map**: Record type for clean phase logic
+   ```typescript
+   const phaseTransitions: Record<Phase, Phase> = {
+     'waiting': 'select-hand',
+     'select-hand': 'match-hand',
+     // ...
+   };
+   ```
+   - Centralized transition logic
+   - Easy to modify sequence
+   - Type-safe (TypeScript ensures all phases covered)
+
+4. **Conditional Phase Transitions**: check-score phase has branching logic
+   - If score >= 7: go to go-stop phase
+   - If score < 7: switch turn (skip go-stop)
+   - Implemented with explicit if-else in advancePhase()
+
+5. **Test Data Setup**: Creating test cards inline for scoring tests
+   ```typescript
+   const gwangCards: Card[] = [
+     { id: 'january-gwang', month: Month.January, type: CardType.Gwang, imagePath: 'test.png' },
+     // ...
+   ];
+   ```
+   - Avoids dependency on real card data
+   - Makes test intent explicit
+
+6. **TypeScript Unused Import Warning**: Remove unused type imports
+   - GameState interface was imported but only used in type annotations
+   - TypeScript infers types from function signatures
+   - Only import types when explicitly needed
+
+### Verification Results
+
+```bash
+✓ 38 state tests PASS
+✓ 23 deck tests PASS (existing)
+✓ 14 card tests PASS (existing)
+✓ 3 example tests PASS (existing)
+✓ Total: 78 tests PASS
+✓ TypeScript compilation: PASS (no errors)
+✓ npm test: All tests PASS
+```
+
+### Files Created
+- `src/game/state.ts`: 165 lines (types, interfaces, 9 functions)
+- `src/__tests__/state.test.ts`: 535 lines (38 comprehensive tests)
+
+### Next Steps
+- Task 7 (Game Rules): Will use state functions for card matching logic
+- Task 9 (Scoring System): Will extend calculateScore() with full rules
+- Task 10 (Turn Logic): Will orchestrate phase transitions with game rules
+- Task 11 (Go/Stop Decision): Will use shouldEnterGoStopPhase() for AI logic
+
+### Dependencies
+- Depends on: Task 3 (Card types), Task 5 (Deck functions)
+- Blocks: Tasks 7, 9, 10, 11 (all game logic needs state management)
+

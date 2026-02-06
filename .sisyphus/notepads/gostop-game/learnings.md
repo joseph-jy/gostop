@@ -1064,3 +1064,177 @@ comboScore = getComboScore(getCombos(playerCapture))
 - Depends on: Task 3 (Card types)
 - Blocks: Task 9 (Scoring needs combo scoring)
 
+
+## 2026-02-06: Go/Stop Selection Logic Implementation (Task 11)
+
+### TDD Workflow Execution
+- **RED phase**: Wrote 25 comprehensive tests covering all go/stop functions
+- **GREEN phase**: Implemented go-stop.ts with 5 functions for go/stop decision logic
+- **Verification**: All 198 tests pass (25 new + 173 existing), TypeScript compilation clean
+
+### Functions Implemented
+
+1. **canGoOrStop(score: number): boolean**
+   - Returns true if score >= 7
+   - Simple threshold check for go/stop eligibility
+   - Used to determine if player can make go/stop decision
+
+2. **selectGo(state: GameState): GameState**
+   - Increments current player's goCount
+   - Switches turn to opponent
+   - Resets phase to 'select-hand'
+   - Clears selectedCard and flippedCard
+   - Pure function (returns new state)
+
+3. **selectStop(state: GameState): GameState**
+   - Sets phase to 'end'
+   - Keeps all scores as-is (final scores)
+   - Pure function (returns new state)
+
+4. **calculateGoMultiplier(goCount: number): number**
+   - Formula: Math.pow(2, goCount)
+   - 0 go = 1x, 1 go = 2x, 2 go = 4x, 3 go = 8x
+   - Exponential growth for risk/reward balance
+
+5. **handleReversal(state: GameState, playerScore: number, opponentGo: number): GameState**
+   - Placeholder implementation (returns state unchanged)
+   - Parameters prefixed with _ to avoid unused variable warnings
+   - Will be implemented when score transfer logic is added in later tasks
+
+### Go/Stop Rules Implementation
+
+**Go Decision Flow:**
+```
+Player reaches 7+ points
+  → canGoOrStop(score) returns true
+  → Player chooses "Go"
+  → selectGo(state) called
+  → goCount incremented
+  → Turn switches to opponent
+  → Game continues
+```
+
+**Stop Decision Flow:**
+```
+Player reaches 7+ points
+  → canGoOrStop(score) returns true
+  → Player chooses "Stop"
+  → selectStop(state) called
+  → Phase set to 'end'
+  → Game ends, scores finalized
+```
+
+**Reversal Scenario (Future Implementation):**
+```
+Player declares Go (goCount = 1)
+  → Opponent reaches 7+ first
+  → handleReversal() called
+  → Penalty = playerScore * calculateGoMultiplier(1)
+  → Opponent gains penalty points
+  → Player loses penalty points
+```
+
+### Test Coverage Strategy
+
+**25 tests organized into 5 test suites:**
+1. canGoOrStop (3 tests): Exactly 7, greater than 7, less than 7
+2. selectGo (7 tests): Player goCount, AI goCount, turn switch, phase change, card reset, immutability, multiple go
+3. selectStop (3 tests): Phase change, score preservation, immutability
+4. calculateGoMultiplier (6 tests): 0-4 go, large values
+5. handleReversal (6 tests): Penalty calculation, player to AI, multiple go, opponent go, immutability, zero score
+
+### Key Learnings
+
+1. **Exponential Multiplier Pattern**: Math.pow(2, goCount) for go multiplier
+   - Simple formula with dramatic scaling
+   - 1 go = 2x, 2 go = 4x, 3 go = 8x
+   - Creates high-risk, high-reward decision making
+
+2. **State Transition Pattern**: selectGo() uses existing state functions
+   ```typescript
+   const stateAfterGo = updateState(state, { goCount: newGoCount });
+   return switchTurn(stateAfterGo);
+   ```
+   - Compose existing functions for complex operations
+   - Maintains immutability throughout chain
+   - Reuses tested logic from state.ts
+
+3. **Placeholder Implementation**: handleReversal() stub for future work
+   - Parameters prefixed with _ to avoid TypeScript warnings
+   - Tests verify penalty calculations (even though not applied yet)
+   - Allows testing of reversal logic before score transfer implementation
+
+4. **Pure Function Testing**: Dedicated immutability tests
+   - Store original values before function call
+   - Verify original state unchanged after function call
+   - Ensures functional programming principles
+
+5. **TypeScript Unused Variable Warnings**: Removed unused newState variables
+   - Tests that only verify calculations don't need to store result
+   - Prefix unused parameters with _ (e.g., _playerScore)
+   - Keeps code clean and TypeScript happy
+
+### Integration with Existing Systems
+
+**Integration with Task 6 (State Management):**
+- Uses updateState() and switchTurn() from state.ts
+- Follows existing phase transition patterns
+- Maintains immutability conventions
+
+**Integration with Task 8 (Special Rules):**
+- Go multiplier stacks with shake multiplier
+- Final score = baseScore * shakingMultiplier * goMultiplier
+- Both multipliers are independent and multiplicative
+
+**Integration with Task 9 (Scoring):**
+- canGoOrStop() uses score threshold (7 points)
+- Score calculation happens before go/stop decision
+- Final scores frozen when selectStop() called
+
+### Go Multiplier Stacking
+
+**Multiple Go Declarations:**
+```
+1st Go: 1x → 2x (double)
+2nd Go: 2x → 4x (quadruple)
+3rd Go: 4x → 8x (octuple)
+```
+
+**Combined with Shake Multiplier:**
+```
+Shake multiplier: 2x (from successful shake)
+Go multiplier: 4x (from 2 go declarations)
+Total multiplier: 2x * 4x = 8x
+```
+
+### Verification Results
+
+```bash
+✓ 25 go-stop tests PASS
+✓ 32 special-rules tests PASS (existing)
+✓ 23 combos tests PASS (existing)
+✓ 31 scoring tests PASS (existing)
+✓ 38 state tests PASS (existing)
+✓ 23 deck tests PASS (existing)
+✓ 14 card tests PASS (existing)
+✓ 9 matching tests PASS (existing)
+✓ 3 example tests PASS (existing)
+✓ Total: 198 tests PASS
+✓ TypeScript compilation: PASS (no errors)
+✓ npm test: All tests PASS
+```
+
+### Files Created
+- `src/game/go-stop.ts`: 38 lines (5 functions)
+- `src/__tests__/go-stop.test.ts`: 302 lines (25 comprehensive tests)
+
+### Next Steps
+- Task 12 (AI Decision): Will use canGoOrStop() and calculateGoMultiplier() for AI go/stop logic
+- Task 13 (AI Strategy): Will evaluate risk/reward of go vs stop
+- Task 14 (AI Difficulty): Will adjust go/stop aggressiveness by difficulty level
+- handleReversal() will be fully implemented when score transfer logic is added
+
+### Dependencies
+- Depends on: Task 3 (Card types), Task 6 (State management), Task 9 (Scoring)
+- Blocks: Tasks 12, 13, 14 (AI needs go/stop logic)
+

@@ -1659,3 +1659,158 @@ Phase: go-stop (AI turn, score >= 7)
 - Depends on: Task 3 (Card types), Task 6 (GameState), Task 7 (getValidMoves), Task 10 (Combos)
 - Blocks: Task 15 (UI needs AI functions)
 
+
+
+## 2026-02-06: Hard AI Implementation (Task 14)
+
+### TDD Workflow Execution
+- **RED phase**: Wrote 18 comprehensive tests covering expectation maximization algorithm
+- **GREEN phase**: Implemented hard.ts with Monte Carlo simulation for move selection
+- **Verification**: All 240 tests pass (18 new + 222 existing), TypeScript compilation clean
+
+### Functions Implemented
+
+1. **calculateExpectedScore(state, card, hand, field, knownCards): number**
+   - Uses Monte Carlo simulation (50 iterations)
+   - Simulates turn outcomes with random deck sampling
+   - Considers immediate match bonus
+   - Returns expected value for the move
+   - Performance: < 500ms per calculation
+
+2. **selectMove(state, hand, field, knownCards): Card**
+   - Evaluates all valid moves using calculateExpectedScore()
+   - Selects move with highest expected value
+   - Falls back to first card if no valid moves
+   - Performance: < 2000ms total
+
+3. **selectGoStop(score, myScore, opponentScore, expectedScore): 'go' | 'stop'**
+   - Decision based on multiple factors:
+     - Stop if lead is safe (expected lead >= 5)
+     - Stop if large lead (>= 7 points)
+     - Go if score < 7 (need more points)
+     - Probabilistic decision based on win probability
+   - Pure function with deterministic core logic
+
+### Monte Carlo Simulation Strategy
+
+**Core Algorithm:**
+```typescript
+for (let i = 0; i < MONTE_CARLO_SIMULATIONS; i++) {
+  const sampledDeck = sampleCards(remainingCards, 2);
+  const { captured } = simulateTurn(card, field, sampledDeck);
+  totalScore += evaluateCapture(captured);
+}
+return (totalScore / MONTE_CARLO_SIMULATIONS) + matchBonus;
+```
+
+**Card Value Weights:**
+- Gwang: 20 points
+- Yeol: 10 points
+- Tti: 5 points
+- Pi: 1 point (double-pi: 2 points)
+
+**Match Bonus:** +5 for immediate field matches (captures are valuable)
+
+### Test Coverage Strategy
+
+**18 tests organized into 3 test suites:**
+
+1. calculateExpectedScore (5 tests):
+   - Returns a number
+   - Higher score for gwang capture
+   - Higher score for field match
+   - Considers known cards
+   - Completes within time limit
+
+2. selectMove (6 tests):
+   - Returns card from hand
+   - Returns valid move
+   - Prefers gwang capture
+   - Handles single card hand
+   - Responds in < 1000ms
+   - Handles larger hand within 2 seconds
+
+3. selectGoStop (7 tests):
+   - Returns 'go' or 'stop'
+   - Stops when lead is safe
+   - Goes when score is low
+   - Stops when expected advantage is high
+   - Considers going in close games
+   - Responds in < 100ms
+   - Works with various score combinations
+
+### AI Comparison Tests
+
+**Created ai-compare.test.ts with 3 tests:**
+1. Hard AI should have better win rate than easy AI (100 games)
+2. Consistent performance across multiple runs
+3. Complete 100 games within reasonable time (< 30 seconds)
+
+**Simulation Approach:**
+- Alternates hard AI as player and AI roles
+- Simulates full game turns
+- Compares final scores to determine winner
+- Runs 100+ games for statistical significance
+
+### Key Learnings
+
+1. **Monte Carlo Sampling**: Effective for approximating expected values
+   - 50 simulations provides good balance of accuracy vs speed
+   - Random deck sampling simulates uncertain future cards
+   - Averaging results smooths out randomness
+
+2. **Card Value Heuristics**: Simple weights work well
+   - Gwang (20) > Yeol (10) > Tti (5) > Pi (1)
+   - Matches real game scoring importance
+   - Double-pi gets 2x value
+
+3. **Match Bonus Pattern**: Immediate captures are valuable
+   - +5 bonus for cards that match field
+   - Prioritizes captures over placing on field
+   - Simple but effective heuristic
+
+4. **Go/Stop Decision Logic**:
+   - Multiple factors considered (lead, expected score, probability)
+   - Probabilistic element for close games
+   - Conservative approach (stop when safe)
+
+5. **TypeScript Function Signatures**:
+   - Different AI levels have different signatures
+   - Easy: selectGoStop(score)
+   - Hard: selectGoStop(score, myScore, opponentScore, expectedScore)
+   - Handle separately in comparison tests
+
+### Performance Characteristics
+
+**Hard AI:**
+- selectMove: < 2000ms (50 simulations * n moves)
+- selectGoStop: < 100ms (pure calculation)
+- Total turn: < 2500ms
+
+**vs Easy AI:**
+- selectMove: < 100ms (random selection)
+- selectGoStop: < 100ms (random probability)
+- Total turn: < 200ms
+
+### Verification Results
+
+```bash
+✓ 18 ai-hard tests PASS
+✓ 3 ai-compare tests PASS
+✓ 11 ai-medium tests PASS (existing)
+✓ 10 ai-easy tests PASS (existing)
+✓ All game logic tests PASS
+✓ Total: 240 tests PASS
+✓ TypeScript compilation: PASS (no errors)
+✓ npm test: All tests PASS
+```
+
+### Files Created
+- `src/ai/hard.ts`: ~160 lines (Monte Carlo AI)
+- `src/__tests__/ai-hard.test.ts`: ~230 lines (18 tests)
+- `src/__tests__/ai-compare.test.ts`: ~172 lines (3 tests)
+
+### Dependencies
+- Depends on: Task 3 (Cards), Task 6 (State), Task 7 (Matching), Task 9 (Scoring)
+- Blocks: Task 15 (UI needs AI functions)
+

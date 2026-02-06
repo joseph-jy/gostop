@@ -1238,3 +1238,183 @@ Total multiplier: 2x * 4x = 8x
 - Depends on: Task 3 (Card types), Task 6 (State management), Task 9 (Scoring)
 - Blocks: Tasks 12, 13, 14 (AI needs go/stop logic)
 
+
+## 2026-02-06: Easy AI Implementation (Task 12)
+
+### TDD Workflow Execution
+- **RED phase**: Wrote 10 comprehensive tests covering random selection and go/stop decision
+- **GREEN phase**: Implemented easy.ts with 2 functions for random AI behavior
+- **Verification**: All 208 tests pass (10 new + 198 existing), TypeScript compilation clean
+
+### Functions Implemented
+
+1. **selectMove(state: GameState, hand: Card[], field: Card[]): Card**
+   - Returns: Random card from valid moves
+   - Algorithm: Get valid moves using getValidMoves(), select random index
+   - Immutability: Pure function, no state mutations
+   - Performance: < 100ms (typically < 1ms)
+   - Use case: AI card selection in select-hand phase
+
+2. **selectGoStop(score: number): 'go' | 'stop'**
+   - Returns: 'go' with 30% probability, 'stop' with 70% probability
+   - Algorithm: Math.random() < 0.3 ? 'go' : 'stop'
+   - Immutability: Pure function, no side effects
+   - Performance: < 100ms (typically < 0.1ms)
+   - Use case: AI go/stop decision in go-stop phase
+
+### Easy AI Strategy
+
+**Characteristics:**
+- No calculation or optimization
+- Pure random selection from valid moves
+- Fixed probability distribution (70/30 for stop/go)
+- Fast response time (< 100ms)
+- Suitable for beginner difficulty level
+
+**Decision Logic:**
+```typescript
+// Card selection: uniform random from all valid moves
+const validMoves = getValidMoves(hand, field);
+const randomIndex = Math.floor(Math.random() * validMoves.length);
+return validMoves[randomIndex];
+
+// Go/Stop decision: fixed 70/30 distribution
+return Math.random() < 0.3 ? 'go' : 'stop';
+```
+
+### Test Coverage Strategy
+
+**10 tests organized into 2 test suites:**
+
+1. selectMove (5 tests):
+   - Returns card from hand
+   - Returns valid move (in hand)
+   - Returns different cards on multiple calls (randomness)
+   - Handles single card in hand
+   - Responds in < 100ms
+
+2. selectGoStop (5 tests):
+   - Returns either 'go' or 'stop'
+   - Returns 'stop' ~70% of time (1000 iterations, 60-80% margin)
+   - Returns 'go' ~30% of time (1000 iterations, 20-40% margin)
+   - Responds in < 100ms
+   - Works with different score values
+
+### Key Learnings
+
+1. **Random Selection Pattern**: Simple and effective for easy AI
+   ```typescript
+   const randomIndex = Math.floor(Math.random() * array.length);
+   return array[randomIndex];
+   ```
+   - Uniform distribution across all options
+   - O(1) time complexity
+   - No dependencies on game state
+
+2. **Probability Testing**: Statistical validation with margin of error
+   - Run function 1000 times to verify distribution
+   - Allow 10% margin (60-80% instead of exact 70%)
+   - Accounts for randomness variance
+   - More reliable than single-run tests
+
+3. **Performance Measurement**: Use performance.now() for timing
+   ```typescript
+   const start = performance.now();
+   selectMove(state, hand, field);
+   const end = performance.now();
+   expect(end - start).toBeLessThan(100);
+   ```
+   - Measures actual execution time
+   - Ensures AI responds quickly (< 100ms)
+   - Prevents performance regressions
+
+4. **Pure Functions for AI**: No state mutations or side effects
+   - Easier to test and reason about
+   - Can be called multiple times without issues
+   - Enables easy difficulty level switching
+   - Supports future AI difficulty levels
+
+5. **Unused Parameter Convention**: Prefix with underscore
+   - selectMove uses _state parameter (not needed for random selection)
+   - Keeps function signature consistent with future AI levels
+   - Avoids TypeScript unused variable warnings
+   - Documents intent: "parameter exists for future use"
+
+### Integration with Game Flow
+
+**selectMove() Integration:**
+```
+Phase: select-hand
+  → AI's turn
+  → Call selectMove(state, aiHand, field)
+  → Returns random card from aiHand
+  → Card played to field
+  → Advance to match-hand phase
+```
+
+**selectGoStop() Integration:**
+```
+Phase: go-stop
+  → AI's turn (score >= 7)
+  → Call selectGoStop(aiScore)
+  → Returns 'go' (30%) or 'stop' (70%)
+  → If 'go': increment goCount, switch turn
+  → If 'stop': set phase to 'end', game ends
+```
+
+### Comparison with Future AI Levels
+
+**Easy (Task 12 - Current):**
+- Random card selection
+- Random go/stop (70/30)
+- No calculation
+- Response: < 100ms
+
+**Medium (Task 13 - Future):**
+- Prefer high-value cards
+- Consider opponent's score
+- Evaluate go/stop risk/reward
+- Response: < 500ms
+
+**Hard (Task 14 - Future):**
+- Optimal card selection
+- Predict opponent moves
+- Advanced go/stop strategy
+- Response: < 1000ms
+
+### Verification Results
+
+```bash
+✓ 10 easy AI tests PASS
+✓ 25 go-stop tests PASS (existing)
+✓ 32 special-rules tests PASS (existing)
+✓ 23 combos tests PASS (existing)
+✓ 31 scoring tests PASS (existing)
+✓ 38 state tests PASS (existing)
+✓ 23 deck tests PASS (existing)
+✓ 14 card tests PASS (existing)
+✓ 9 matching tests PASS (existing)
+✓ 3 example tests PASS (existing)
+✓ Total: 208 tests PASS
+✓ TypeScript compilation: PASS (no errors)
+✓ npm test: All tests PASS
+```
+
+### Files Created
+- `src/ai/easy.ts`: 17 lines (2 functions)
+- `src/__tests__/ai-easy.test.ts`: 155 lines (10 comprehensive tests)
+
+### Commit
+- Message: `feat(ai): implement easy difficulty AI (random selection)`
+- Files: 2 changed, 172 insertions
+
+### Next Steps
+- Task 13 (Medium AI): Will implement card value evaluation
+- Task 14 (Hard AI): Will implement optimal strategy
+- Task 15 (UI Integration): Will use selectMove() and selectGoStop() in game loop
+- Consider adding AI difficulty selection to game settings
+
+### Dependencies
+- Depends on: Task 3 (Card types), Task 6 (State management), Task 7 (Matching logic), Task 11 (Go/Stop logic)
+- Blocks: Task 15 (UI needs AI functions)
+

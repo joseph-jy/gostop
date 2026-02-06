@@ -1418,3 +1418,244 @@ Phase: go-stop
 - Depends on: Task 3 (Card types), Task 6 (State management), Task 7 (Matching logic), Task 11 (Go/Stop logic)
 - Blocks: Task 15 (UI needs AI functions)
 
+
+
+## 2026-02-06: Medium AI Implementation (Task 13)
+
+### TDD Workflow Execution
+- **RED phase**: Wrote 11 comprehensive tests covering heuristic-based strategy
+- **GREEN phase**: Implemented medium.ts with priority-based card selection and score-based go/stop
+- **Verification**: All 219 tests pass (11 new + 208 existing), TypeScript compilation clean
+
+### Functions Implemented
+
+1. **selectMove(state: GameState, hand: Card[], field: Card[]): Card**
+   - Returns: Card selected based on priority heuristics
+   - Priority 1: Gwang cards that can be captured (same month on field)
+   - Priority 2: Cards that complete combos (godori/hongdan/cheongdan/chodan)
+   - Priority 3: Random selection from remaining cards
+   - Performance: < 500ms (heuristic evaluation)
+   - Use case: AI card selection with strategic thinking
+
+2. **selectGoStop(score: number, myScore: number, opponentScore: number): 'go' | 'stop'**
+   - Returns: 'go' or 'stop' based on score difference
+   - Logic:
+     - If lead >= 10 (myScore - opponentScore >= 10): Stop (safe lead)
+     - If score < 7: Go (need more points)
+     - Else: Random (70% stop, 30% go)
+   - Performance: < 500ms (simple calculation)
+   - Use case: AI go/stop decision with risk assessment
+
+### Medium AI Strategy
+
+**Characteristics:**
+- Heuristic-based decision making
+- Priority system for card selection
+- Score-aware go/stop decisions
+- Faster than hard AI (< 500ms)
+- Better than random (easy AI)
+
+**Card Selection Priority:**
+```
+1. Gwang cards (광) that can match field cards
+   → Highest value cards (5 points for 3+ gwang)
+   
+2. Cards that complete combos
+   → Godori (3 birds): february-yeol, april-yeol, august-yeol
+   → Hongdan (red ribbons): january-tti, february-tti, march-tti
+   → Cheongdan (blue ribbons): june-tti, september-tti, october-tti
+   → Chodan (green ribbons): april-tti, may-tti, july-tti
+   → Each combo = 5 points
+   
+3. Random selection from remaining cards
+   → Fallback when no priority moves available
+```
+
+**Go/Stop Decision Logic:**
+```
+IF myScore - opponentScore >= 10:
+  → STOP (safe lead, minimize risk)
+  
+IF score < 7:
+  → GO (need more points to win)
+  
+ELSE:
+  → Random (70% stop, 30% go)
+  → Conservative bias (prefer stopping)
+```
+
+### Combo Detection Implementation
+
+**canCompleteCombo() Helper Function:**
+- Simulates playing card + capturing field cards
+- Checks if resulting capture pile completes any combo
+- Compares with current capture pile to detect NEW combos
+- Returns true if any combo would be completed
+
+**Combo Card Sets:**
+```typescript
+const GODORI_CARDS = ['february-yeol', 'april-yeol', 'august-yeol'];
+const HONGDAN_CARDS = ['january-tti', 'february-tti', 'march-tti'];
+const CHEONGDAN_CARDS = ['june-tti', 'september-tti', 'october-tti'];
+const CHODAN_CARDS = ['april-tti', 'may-tti', 'july-tti'];
+```
+
+**Detection Algorithm:**
+```typescript
+function canCompleteCombo(card: Card, aiCapture: Card[], field: Card[]): boolean {
+  const matchingCards = findMatchingCards(card, field);
+  if (matchingCards.length === 0) return false;
+  
+  const potentialCapture = [...aiCapture, card, ...matchingCards];
+  const capturedIds = potentialCapture.map(c => c.id);
+  
+  // Check if any combo is completed
+  const hasGodori = GODORI_CARDS.every(id => capturedIds.includes(id));
+  const hasHongdan = HONGDAN_CARDS.every(id => capturedIds.includes(id));
+  // ... (check all combos)
+  
+  // Check if combo is NEW (not already completed)
+  const currentCapturedIds = aiCapture.map(c => c.id);
+  const currentHasGodori = GODORI_CARDS.every(id => currentCapturedIds.includes(id));
+  // ... (check current combos)
+  
+  return (hasGodori && !currentHasGodori) || (hasHongdan && !currentHasHongdan) || ...;
+}
+```
+
+### Test Coverage Strategy
+
+**11 tests organized into 2 test suites:**
+
+1. selectMove (5 tests):
+   - Prioritizes gwang cards when available on field
+   - Prioritizes combo completion (godori)
+   - Prioritizes combo completion (hongdan)
+   - Falls back to random selection when no priority moves
+   - Responds in < 500ms
+
+2. selectGoStop (6 tests):
+   - Stops when leading by 10+ points
+   - Stops when leading by more than 10 points
+   - Goes when score is less than 7
+   - Goes when score is exactly 6
+   - Makes random decision when score >= 7 and lead < 10
+   - Prefers stop over go in random case (70% stop)
+
+### Key Learnings
+
+1. **Priority-Based Selection**: Clear hierarchy for decision making
+   - Check highest priority first (gwang)
+   - Fall through to next priority if no matches
+   - Random as final fallback
+   - Easy to extend with more priorities
+
+2. **Combo Simulation**: Predict future state to evaluate moves
+   - Simulate card play + capture
+   - Check if combo would be completed
+   - Compare with current state to detect NEW combos
+   - Prevents redundant combo attempts
+
+3. **Score-Based Risk Assessment**: Simple but effective go/stop logic
+   - Large lead (10+) → Stop (minimize risk)
+   - Low score (<7) → Go (need points)
+   - Middle ground → Random with conservative bias
+   - Balances aggression and safety
+
+4. **Array.filter() for Priority Selection**: Clean pattern for filtering
+   ```typescript
+   const gwangCards = validMoves.filter(card => {
+     if (card.type !== CardType.Gwang) return false;
+     const matchingCards = findMatchingCards(card, field);
+     return matchingCards.length > 0;
+   });
+   ```
+   - Combines type check and field match check
+   - Returns empty array if no matches (safe)
+   - Easy to chain with other filters
+
+5. **Statistical Testing for Randomness**: Verify probability distribution
+   - Run 1000 iterations to check 70/30 split
+   - Allow margin of error (60-80% for 70%)
+   - Ensures random behavior is truly random
+   - Catches biased implementations
+
+### Integration with Game Flow
+
+**selectMove() Integration:**
+```
+Phase: select-hand (AI turn)
+  → Call selectMove(state, aiHand, field)
+  → Check Priority 1: Gwang cards with field matches
+  → Check Priority 2: Cards that complete combos
+  → Check Priority 3: Random from remaining
+  → Return selected card
+  → Play card to field
+  → Advance to match-hand phase
+```
+
+**selectGoStop() Integration:**
+```
+Phase: go-stop (AI turn, score >= 7)
+  → Calculate myScore (AI capture pile)
+  → Calculate opponentScore (player capture pile)
+  → Call selectGoStop(score, myScore, opponentScore)
+  → If lead >= 10: Return 'stop'
+  → If score < 7: Return 'go'
+  → Else: Random (70% stop, 30% go)
+  → Apply decision (increment goCount or end game)
+```
+
+### Comparison with Other AI Levels
+
+**Easy (Task 12):**
+- Random card selection
+- Random go/stop (70/30)
+- No calculation
+- Response: < 100ms
+
+**Medium (Task 13 - Current):**
+- Priority-based card selection (gwang > combo > random)
+- Score-aware go/stop (10+ lead → stop)
+- Heuristic evaluation
+- Response: < 500ms
+
+**Hard (Task 14 - Future):**
+- Optimal card selection with lookahead
+- Advanced go/stop with expectation calculation
+- Minimax or Monte Carlo simulation
+- Response: < 1000ms
+
+### Verification Results
+
+```bash
+✓ 11 medium AI tests PASS
+✓ 10 easy AI tests PASS (existing)
+✓ 25 go-stop tests PASS (existing)
+✓ 32 special-rules tests PASS (existing)
+✓ 23 combos tests PASS (existing)
+✓ 31 scoring tests PASS (existing)
+✓ 38 state tests PASS (existing)
+✓ 23 deck tests PASS (existing)
+✓ 14 card tests PASS (existing)
+✓ 9 matching tests PASS (existing)
+✓ 3 example tests PASS (existing)
+✓ Total: 219 tests PASS
+✓ TypeScript compilation: PASS (no errors)
+✓ npm test: All tests PASS (excluding ai-hard.test.ts)
+```
+
+### Files Created
+- `src/ai/medium.ts`: 88 lines (2 functions + 1 helper)
+- `src/__tests__/ai-medium.test.ts`: 247 lines (11 comprehensive tests)
+
+### Next Steps
+- Task 14 (Hard AI): Will implement advanced strategy with lookahead
+- Task 15 (UI Integration): Will use medium AI as default difficulty
+- Consider adding more priorities (yeol > tti > pi)
+- Consider adding combo progress tracking (2/3 cards collected)
+
+### Dependencies
+- Depends on: Task 3 (Card types), Task 6 (GameState), Task 7 (getValidMoves), Task 10 (Combos)
+- Blocks: Task 15 (UI needs AI functions)
+

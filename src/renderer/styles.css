@@ -1020,6 +1020,44 @@ body::before {
   height: var(--card-height);
 }
 
+/* Field stacking — same month cards overlap */
+.field-stack {
+  display: inline-flex;
+  position: relative;
+}
+
+.field-stack .card {
+  margin-left: -30px;
+}
+
+.field-stack .card:first-child {
+  margin-left: 0;
+}
+
+.field-stack:hover .card {
+  margin-left: -18px;
+}
+
+.field-stack:hover .card:first-child {
+  margin-left: 0;
+}
+
+.field-stack[data-count="3"] {
+  outline: 2px solid rgba(194, 59, 34, 0.5);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
+}
+
+/* Pending hand card on field (waiting for deck flip) */
+.card--pending {
+  opacity: 0.8;
+  border-color: var(--dancheong-yellow);
+  box-shadow:
+    0 0 0 1px var(--dancheong-yellow),
+    0 0 8px rgba(212, 168, 64, 0.3),
+    var(--shadow-card);
+}
+
 /* Deck pile */
 .deck-pile {
   position: relative;

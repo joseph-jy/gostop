@@ -7,8 +7,10 @@ export type Phase =
   | 'waiting'
   | 'select-hand'
   | 'match-hand'
+  | 'choose-match-hand'
   | 'flip-deck'
   | 'match-deck'
+  | 'choose-match-deck'
   | 'check-score'
   | 'go-stop'
   | 'end';
@@ -18,6 +20,17 @@ export type Turn = 'player' | 'ai';
 export interface Action {
   type: string;
   payload?: unknown;
+}
+
+export interface PendingHandMatch {
+  handCard: Card;
+  matchedFieldCard: Card;
+}
+
+export interface ChoiceContext {
+  playedCard: Card;
+  matchingCards: Card[];
+  source: 'hand' | 'deck';
 }
 
 export interface GameState {
@@ -34,6 +47,8 @@ export interface GameState {
   flippedCard: Card | null;
   lastAction: Action | null;
   shakingMultiplier: number;
+  pendingHandMatch: PendingHandMatch | null;
+  choiceContext: ChoiceContext | null;
 }
 
 export function createInitialState(dealResult: DealResult): GameState {
@@ -51,6 +66,8 @@ export function createInitialState(dealResult: DealResult): GameState {
     flippedCard: null,
     lastAction: null,
     shakingMultiplier: 1,
+    pendingHandMatch: null,
+    choiceContext: null,
   };
 }
 
@@ -71,6 +88,8 @@ export function switchTurn(state: GameState): GameState {
     phase: 'select-hand',
     selectedCard: null,
     flippedCard: null,
+    pendingHandMatch: null,
+    choiceContext: null,
   };
 }
 
@@ -113,13 +132,15 @@ export function advancePhase(state: GameState): GameState {
     'waiting': 'select-hand',
     'select-hand': 'match-hand',
     'match-hand': 'flip-deck',
+    'choose-match-hand': 'flip-deck',
     'flip-deck': 'match-deck',
     'match-deck': 'check-score',
+    'choose-match-deck': 'check-score',
     'check-score': 'select-hand',
     'go-stop': 'select-hand',
     'end': 'end',
   };
-  
+
   if (state.phase === 'check-score') {
     if (shouldEnterGoStopPhase(state)) {
       return updateState(state, { phase: 'go-stop' });
@@ -127,8 +148,8 @@ export function advancePhase(state: GameState): GameState {
       return switchTurn(state);
     }
   }
-  
+
   const nextPhase = phaseTransitions[state.phase];
-  
+
   return updateState(state, { phase: nextPhase });
 }

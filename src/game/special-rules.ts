@@ -137,6 +137,29 @@ export function applyChongtong(
   };
 }
 
+// 쌌다: 핸드카드가 필드 1장 매칭 후, 덱 카드도 같은 달일 때
+export function detectSsatda(handCard: Card, deckCard: Card): boolean {
+  return handCard.month === deckCard.month;
+}
+
+export interface SsatdaResult {
+  remainingField: Card[];
+}
+
+export function applySsatda(
+  handCard: Card,
+  _matchedFieldCard: Card,
+  deckCard: Card,
+  field: Card[],
+): SsatdaResult {
+  return { remainingField: [...field, handCard, deckCard] };
+}
+
+// 쪽났다: 핸드카드 매칭 없이 필드에 놓은 후, 덱 카드가 같은 달일 때
+export function detectJjoknassda(handCard: Card, deckCard: Card): boolean {
+  return handCard.month === deckCard.month;
+}
+
 export interface ShakeResult {
   multiplier: number;
   success: boolean;

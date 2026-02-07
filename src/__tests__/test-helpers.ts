@@ -20,6 +20,8 @@ export function createMockGameState(overrides?: Partial<GameState>): GameState {
     flippedCard: null,
     lastAction: null,
     shakingMultiplier: 1,
+    pendingHandMatch: null,
+    choiceContext: null,
     ...overrides,
   };
 }

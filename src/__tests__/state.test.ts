@@ -13,19 +13,21 @@ import { createDeck, dealCards } from '../game/deck';
 import { Card, CardType, Month } from '../game/cards';
 
 describe('Phase Type', () => {
-  it('should have 8 valid phase values', () => {
+  it('should have 10 valid phase values', () => {
     const validPhases: Phase[] = [
       'waiting',
       'select-hand',
       'match-hand',
+      'choose-match-hand',
       'flip-deck',
       'match-deck',
+      'choose-match-deck',
       'check-score',
       'go-stop',
       'end'
     ];
-    
-    expect(validPhases).toHaveLength(8);
+
+    expect(validPhases).toHaveLength(10);
   });
 });
 
@@ -140,8 +142,24 @@ describe('createInitialState', () => {
     const deck = createDeck();
     const dealResult = dealCards(deck);
     const state = createInitialState(dealResult);
-    
+
     expect(state.shakingMultiplier).toBe(1);
+  });
+
+  it('should initialize with null pendingHandMatch', () => {
+    const deck = createDeck();
+    const dealResult = dealCards(deck);
+    const state = createInitialState(dealResult);
+
+    expect(state.pendingHandMatch).toBeNull();
+  });
+
+  it('should initialize with null choiceContext', () => {
+    const deck = createDeck();
+    const dealResult = dealCards(deck);
+    const state = createInitialState(dealResult);
+
+    expect(state.choiceContext).toBeNull();
   });
 });
 
@@ -232,23 +250,46 @@ describe('Turn Switching', () => {
     const deck = createDeck();
     const dealResult = dealCards(deck);
     const state = createInitialState(dealResult);
-    
+
     const testCard: Card = {
       id: 'test-card',
       month: Month.January,
       type: CardType.Pi,
       imagePath: 'test.png'
     };
-    
-    const stateWithCards = updateState(state, { 
+
+    const stateWithCards = updateState(state, {
       selectedCard: testCard,
       flippedCard: testCard
     });
-    
+
     const newState = switchTurn(stateWithCards);
-    
+
     expect(newState.selectedCard).toBeNull();
     expect(newState.flippedCard).toBeNull();
+  });
+
+  it('should clear pendingHandMatch and choiceContext when switching turn', () => {
+    const deck = createDeck();
+    const dealResult = dealCards(deck);
+    const state = createInitialState(dealResult);
+
+    const testCard: Card = {
+      id: 'test-card',
+      month: Month.January,
+      type: CardType.Pi,
+      imagePath: 'test.png'
+    };
+
+    const stateWithPending = updateState(state, {
+      pendingHandMatch: { handCard: testCard, matchedFieldCard: testCard },
+      choiceContext: { playedCard: testCard, matchingCards: [testCard], source: 'hand' },
+    });
+
+    const newState = switchTurn(stateWithPending);
+
+    expect(newState.pendingHandMatch).toBeNull();
+    expect(newState.choiceContext).toBeNull();
   });
 });
 

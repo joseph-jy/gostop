@@ -1,6 +1,6 @@
 import './styles.css';
 
-import { Card, CardType } from '../game/cards';
+import { Card, CardType, Month } from '../game/cards';
 import { createDeck, dealCards } from '../game/deck';
 import {
   GameState,
@@ -23,6 +23,8 @@ import {
   applyBomb,
   applyChongtong,
   applyShake,
+  detectSsatda,
+  applySsatda,
 } from '../game/special-rules';
 import { selectGo, selectStop, calculateGoMultiplier } from '../game/go-stop';
 import { getCombos, getComboScore } from '../game/combos';
@@ -274,7 +276,7 @@ class Game {
     captureKey: 'playerCapture' | 'aiCapture',
     opponentCaptureKey: 'playerCapture' | 'aiCapture',
     extraUpdates: Partial<GameState> = {},
-  ): void {
+  ): boolean {
     if (detectJjok(card, this.state.field)) {
       const result = applyJjok(
         card,
@@ -291,7 +293,7 @@ class Game {
         ...extraUpdates,
       });
       playSound('card-match');
-      return;
+      return true;
     }
 
     if (detectPpuk(card, this.state.field)) {
@@ -302,12 +304,26 @@ class Game {
         ...extraUpdates,
       });
       playSound('card-match');
-      return;
+      return true;
     }
 
     const matchResult = applyMatch(card, this.state.field);
 
     if (matchResult.requiresChoice && matchResult.matchingCards) {
+      // Deck card choice: player chooses, AI auto-picks
+      if (this.state.currentTurn === 'player') {
+        this.state = updateState(this.state, {
+          phase: 'choose-match-deck',
+          choiceContext: {
+            playedCard: card,
+            matchingCards: matchResult.matchingCards,
+            source: 'deck',
+          },
+          ...extraUpdates,
+        });
+        this.renderAll();
+        return false; // indicates async handling
+      }
       const bestMatch = this.pickBestMatch(matchResult.matchingCards);
       this.state = updateState(this.state, {
         field: this.state.field.filter((f) => f.id !== bestMatch.id),
@@ -328,13 +344,86 @@ class Game {
         ...extraUpdates,
       });
     }
+    return true;
   }
 
   private matchHandCard(card: Card, turn: 'player' | 'ai'): void {
     const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
     const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
 
-    this.applyCardToField(card, captureKey, opponentCaptureKey);
+    // Jjok (2장 매칭) or Ppuk (3장 매칭): 즉시 캡처, 쌌다 불가
+    if (detectJjok(card, this.state.field)) {
+      const result = applyJjok(
+        card,
+        this.state.field,
+        getPiCards(this.state[opponentCaptureKey]),
+      );
+      const opponentWithoutStolen = this.state[opponentCaptureKey].filter(
+        (c) => !result.stolenPi.some((s) => s.id === c.id),
+      );
+      this.state = updateState(this.state, {
+        field: result.remainingField,
+        [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
+        [opponentCaptureKey]: opponentWithoutStolen,
+      });
+      playSound('card-match');
+      this.proceedToFlipDeck();
+      return;
+    }
+
+    if (detectPpuk(card, this.state.field)) {
+      const result = applyPpuk(card, this.state.field);
+      this.state = updateState(this.state, {
+        field: result.remainingField,
+        [captureKey]: [...this.state[captureKey], ...result.captured],
+      });
+      playSound('card-match');
+      this.proceedToFlipDeck();
+      return;
+    }
+
+    const matchResult = applyMatch(card, this.state.field);
+
+    if (matchResult.requiresChoice && matchResult.matchingCards) {
+      // 2장+ 같은 달: 플레이어면 선택 UI, AI면 자동 선택
+      if (turn === 'player') {
+        this.state = updateState(this.state, {
+          phase: 'choose-match-hand',
+          choiceContext: {
+            playedCard: card,
+            matchingCards: matchResult.matchingCards,
+            source: 'hand',
+          },
+        });
+        this.renderAll();
+        return;
+      }
+      // AI: 자동 선택
+      const bestMatch = this.pickBestMatch(matchResult.matchingCards);
+      this.state = updateState(this.state, {
+        field: this.state.field.filter((f) => f.id !== bestMatch.id),
+        pendingHandMatch: { handCard: card, matchedFieldCard: bestMatch },
+      });
+      playSound('card-match');
+      this.proceedToFlipDeck();
+      return;
+    }
+
+    if (matchResult.captured.length > 0) {
+      // 1장 매칭: 캡처 보류, pendingHandMatch에 저장
+      const matchedFieldCard = matchResult.captured.find((c) => c.id !== card.id)!;
+      this.state = updateState(this.state, {
+        field: matchResult.remainingField,
+        pendingHandMatch: { handCard: card, matchedFieldCard },
+      });
+      playSound('card-match');
+    } else {
+      // 0장 매칭: 카드를 필드에 추가
+      this.state = updateState(this.state, {
+        field: matchResult.remainingField,
+      });
+    }
+
     this.proceedToFlipDeck();
   }
 
@@ -347,8 +436,50 @@ class Game {
     }, PHASE_TRANSITION_DELAY);
   }
 
+  private resolvePendingHandMatch(): void {
+    const pending = this.state.pendingHandMatch;
+    if (!pending) return;
+
+    const turn = this.state.currentTurn;
+    const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
+
+    this.state = updateState(this.state, {
+      [captureKey]: [...this.state[captureKey], pending.handCard, pending.matchedFieldCard],
+      pendingHandMatch: null,
+    });
+  }
+
+  private handleFieldCardChoice(chosenCard: Card): void {
+    const ctx = this.state.choiceContext;
+    if (!ctx) return;
+
+    const turn = this.state.currentTurn;
+    const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
+
+    if (ctx.source === 'hand') {
+      // Hand card choice → defer capture as pendingHandMatch for ssatda check
+      this.state = updateState(this.state, {
+        field: this.state.field.filter((f) => f.id !== chosenCard.id),
+        pendingHandMatch: { handCard: ctx.playedCard, matchedFieldCard: chosenCard },
+        choiceContext: null,
+      });
+      playSound('card-match');
+      this.proceedToFlipDeck();
+    } else {
+      // Deck card choice → capture immediately
+      this.state = updateState(this.state, {
+        field: this.state.field.filter((f) => f.id !== chosenCard.id),
+        [captureKey]: [...this.state[captureKey], ctx.playedCard, chosenCard],
+        choiceContext: null,
+      });
+      playSound('card-match');
+      this.checkScoreAfterTurn();
+    }
+  }
+
   private flipAndMatchDeckCard(): void {
     if (this.state.deck.length === 0) {
+      this.resolvePendingHandMatch();
       this.checkScoreAfterTurn();
       return;
     }
@@ -356,6 +487,7 @@ class Game {
     this.state = flipDeckCard(this.state);
     const flipped = this.state.flippedCard;
     if (!flipped) {
+      this.resolvePendingHandMatch();
       this.checkScoreAfterTurn();
       return;
     }
@@ -365,8 +497,32 @@ class Game {
     const turn = this.state.currentTurn;
     const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
     const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
+    const pending = this.state.pendingHandMatch;
 
-    this.applyCardToField(flipped, captureKey, opponentCaptureKey, { phase: 'match-deck' });
+    // 쌌다 체크: pendingHandMatch 있고 덱 카드가 같은 달
+    if (pending && detectSsatda(pending.handCard, flipped)) {
+      const result = applySsatda(
+        pending.handCard,
+        pending.matchedFieldCard,
+        flipped,
+        this.state.field,
+      );
+      this.state = updateState(this.state, {
+        field: result.remainingField,
+        pendingHandMatch: null,
+        phase: 'match-deck',
+      });
+      playSound('card-place');
+      this.checkScoreAfterTurn();
+      return;
+    }
+
+    // pendingHandMatch 있지만 덱 카드 다른 달 → 지연 캡처 완료
+    this.resolvePendingHandMatch();
+
+    // 덱 카드 매칭 처리 (쪽났다는 applyMatch에서 자연스럽게 처리됨)
+    const resolved = this.applyCardToField(flipped, captureKey, opponentCaptureKey, { phase: 'match-deck' });
+    if (!resolved) return; // choose-match-deck phase, waiting for player choice
     this.checkScoreAfterTurn();
   }
 
@@ -614,16 +770,69 @@ class Game {
     this.fieldEl.innerHTML = '';
 
     const playerHandMonths = new Set(this.state.playerHand.map((c) => c.month));
+    const choiceCtx = this.state.choiceContext;
+    const isChoicePhase =
+      this.state.phase === 'choose-match-hand' || this.state.phase === 'choose-match-deck';
+    const choiceCardIds = isChoicePhase && choiceCtx
+      ? new Set(choiceCtx.matchingCards.map((c) => c.id))
+      : new Set<string>();
 
+    const pending = this.state.pendingHandMatch;
+
+    // Group cards by month
+    const monthGroups = new Map<Month, Card[]>();
     for (const card of this.state.field) {
-      const isHint = playerHandMonths.has(card.month);
-      const comp = new CardComponent({
-        card,
-        isSelectable: false,
-        isHint,
-      });
-      this.fieldCardComponents.push(comp);
-      this.fieldEl.appendChild(comp.getElement());
+      const group = monthGroups.get(card.month) || [];
+      group.push(card);
+      monthGroups.set(card.month, group);
+    }
+
+    // If pending, show the hand card visually on the field in its month group
+    if (pending) {
+      const group = monthGroups.get(pending.handCard.month) || [];
+      // Don't add duplicates
+      if (!group.some((c) => c.id === pending.handCard.id)) {
+        group.push(pending.handCard);
+        monthGroups.set(pending.handCard.month, group);
+      }
+    }
+
+    // Sort by month
+    const sortedMonths = [...monthGroups.keys()].sort((a, b) => a - b);
+
+    for (const month of sortedMonths) {
+      const cards = monthGroups.get(month)!;
+
+      let container: HTMLElement;
+      if (cards.length >= 2) {
+        container = document.createElement('div');
+        container.className = 'field-stack';
+        container.dataset.count = String(cards.length);
+        this.fieldEl.appendChild(container);
+      } else {
+        container = this.fieldEl;
+      }
+
+      for (const card of cards) {
+        const isPendingCard = pending && card.id === pending.handCard.id;
+        const isChoiceCard = choiceCardIds.has(card.id);
+        const isHint = !isChoicePhase && playerHandMonths.has(card.month);
+
+        const comp = new CardComponent({
+          card,
+          isSelectable: isChoiceCard,
+          isHint: isChoiceCard || isHint,
+          onClick: isChoiceCard ? (c) => this.handleFieldCardChoice(c) : undefined,
+        });
+
+        const el = comp.getElement();
+        if (isPendingCard) {
+          el.classList.add('card--pending');
+        }
+
+        this.fieldCardComponents.push(comp);
+        container.appendChild(el);
+      }
     }
   }
 

@@ -9,14 +9,14 @@ export type GameEvent =
   | 'lose';
 
 const SOUND_MAP: Record<GameEvent, string> = {
-  'card-deal': '/assets/sounds/card-deal.mp3',
-  'card-place': '/assets/sounds/card-place.mp3',
-  'card-match': '/assets/sounds/card-match.mp3',
-  'combo': '/assets/sounds/combo.mp3',
-  'go': '/assets/sounds/go.mp3',
-  'stop': '/assets/sounds/stop.mp3',
-  'win': '/assets/sounds/win.mp3',
-  'lose': '/assets/sounds/lose.mp3',
+  'card-deal': 'assets/sounds/card-deal.mp3',
+  'card-place': 'assets/sounds/card-place.mp3',
+  'card-match': 'assets/sounds/card-match.mp3',
+  'combo': 'assets/sounds/combo.mp3',
+  'go': 'assets/sounds/go.mp3',
+  'stop': 'assets/sounds/stop.mp3',
+  'win': 'assets/sounds/win.mp3',
+  'lose': 'assets/sounds/lose.mp3',
 };
 
 const audioCache: Map<GameEvent, HTMLAudioElement> = new Map();

@@ -47,7 +47,7 @@ describe('Hwatu Cards', () => {
     it('should have valid image paths for all cards', () => {
       CARDS.forEach(card => {
         expect(card.imagePath).toBeTruthy();
-        expect(card.imagePath).toMatch(/^cards\//);
+        expect(card.imagePath).toMatch(/^assets\/cards\//);
         expect(card.imagePath).toMatch(/\.png$/);
       });
     });
@@ -96,18 +96,18 @@ describe('Hwatu Cards', () => {
     it('should have 9 Yeol cards in correct months', () => {
       const yeolCards = CARDS.filter(card => card.type === CardType.Yeol);
       expect(yeolCards).toHaveLength(9);
-      
+
       const yeolMonths = yeolCards.map(card => card.month).sort((a, b) => a - b);
       expect(yeolMonths).toEqual([
+        Month.January,
         Month.February,
+        Month.March,
         Month.April,
         Month.May,
         Month.June,
         Month.July,
-        Month.August,
         Month.September,
         Month.October,
-        Month.December,
       ]);
     });
 

@@ -12,13 +12,10 @@ import {
   applyShake,
 } from '../game/special-rules';
 import { Card, CardType, Month } from '../game/cards';
+import { createCard as _createCard } from './test-helpers';
 
-const createCard = (month: Month, type: CardType, id: string): Card => ({
-  id,
-  month,
-  type,
-  imagePath: `cards/${id}.png`,
-});
+// Wrapper to preserve original (month, type, id) argument order in this file
+const createCard = (month: Month, type: CardType, id: string) => _createCard(id, month, type);
 
 describe('Special Rules - Detection', () => {
   describe('detectJjok', () => {

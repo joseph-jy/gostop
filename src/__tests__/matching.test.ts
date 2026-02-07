@@ -101,31 +101,13 @@ describe('getValidMoves', () => {
       },
     ];
 
-    const field: Card[] = [
-      {
-        id: 'january-tti',
-        month: Month.January,
-        type: CardType.Tti,
-        imagePath: 'cards/january-tti.png',
-      },
-    ];
-
-    const validMoves = getValidMoves(hand, field);
+    const validMoves = getValidMoves(hand);
     expect(validMoves).toHaveLength(3);
     expect(validMoves).toEqual(hand);
   });
 
   it('should return empty array when hand is empty', () => {
-    const field: Card[] = [
-      {
-        id: 'january-tti',
-        month: Month.January,
-        type: CardType.Tti,
-        imagePath: 'cards/january-tti.png',
-      },
-    ];
-
-    const validMoves = getValidMoves([], field);
+    const validMoves = getValidMoves([]);
     expect(validMoves).toHaveLength(0);
   });
 });

@@ -31,14 +31,11 @@ import {
   calculateTotal,
   applyBonus,
 } from '../game/scoring';
+import { GO_STOP_THRESHOLD, CARD_TYPE_VALUES } from '../game/constants';
 
-import { selectMove as easySelectMove, selectGoStop as easySelectGoStop } from '../ai/easy';
-import { selectMove as mediumSelectMove, selectGoStop as mediumSelectGoStop } from '../ai/medium';
-import {
-  selectMove as hardSelectMove,
-  selectGoStop as hardSelectGoStop,
-  calculateExpectedScore,
-} from '../ai/hard';
+import { createAiPlayer } from '../ai/index';
+import { type AiPlayer } from '../ai/types';
+import { calculateExpectedScore } from '../ai/hard';
 
 import CardComponent from './components/Card';
 import CardGroup from './components/CardGroup';
@@ -68,6 +65,7 @@ function getPiCards(capture: Card[]): Card[] {
 class Game {
   private state: GameState;
   private difficulty: Difficulty = 'medium';
+  private aiPlayer: AiPlayer = createAiPlayer('medium');
   private stats: GameStats;
   private knownCards: Card[] = [];
   private pendingTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -271,10 +269,12 @@ class Game {
     this.matchHandCard(card, 'player');
   }
 
-  private matchHandCard(card: Card, turn: 'player' | 'ai'): void {
-    const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
-    const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
-
+  private applyCardToField(
+    card: Card,
+    captureKey: 'playerCapture' | 'aiCapture',
+    opponentCaptureKey: 'playerCapture' | 'aiCapture',
+    extraUpdates: Partial<GameState> = {},
+  ): void {
     if (detectJjok(card, this.state.field)) {
       const result = applyJjok(
         card,
@@ -288,9 +288,9 @@ class Game {
         field: result.remainingField,
         [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
         [opponentCaptureKey]: opponentWithoutStolen,
+        ...extraUpdates,
       });
       playSound('card-match');
-      this.proceedToFlipDeck();
       return;
     }
 
@@ -299,9 +299,9 @@ class Game {
       this.state = updateState(this.state, {
         field: result.remainingField,
         [captureKey]: [...this.state[captureKey], ...result.captured],
+        ...extraUpdates,
       });
       playSound('card-match');
-      this.proceedToFlipDeck();
       return;
     }
 
@@ -312,20 +312,29 @@ class Game {
       this.state = updateState(this.state, {
         field: this.state.field.filter((f) => f.id !== bestMatch.id),
         [captureKey]: [...this.state[captureKey], card, bestMatch],
+        ...extraUpdates,
       });
       playSound('card-match');
     } else if (matchResult.captured.length > 0) {
       this.state = updateState(this.state, {
         field: matchResult.remainingField,
         [captureKey]: [...this.state[captureKey], ...matchResult.captured],
+        ...extraUpdates,
       });
       playSound('card-match');
     } else {
       this.state = updateState(this.state, {
         field: matchResult.remainingField,
+        ...extraUpdates,
       });
     }
+  }
 
+  private matchHandCard(card: Card, turn: 'player' | 'ai'): void {
+    const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
+    const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
+
+    this.applyCardToField(card, captureKey, opponentCaptureKey);
     this.proceedToFlipDeck();
   }
 
@@ -357,62 +366,7 @@ class Game {
     const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
     const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
 
-    if (detectJjok(flipped, this.state.field)) {
-      const result = applyJjok(
-        flipped,
-        this.state.field,
-        getPiCards(this.state[opponentCaptureKey]),
-      );
-      const opponentWithoutStolen = this.state[opponentCaptureKey].filter(
-        (c) => !result.stolenPi.some((s) => s.id === c.id),
-      );
-      this.state = updateState(this.state, {
-        field: result.remainingField,
-        [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
-        [opponentCaptureKey]: opponentWithoutStolen,
-        phase: 'match-deck',
-      });
-      playSound('card-match');
-      this.checkScoreAfterTurn();
-      return;
-    }
-
-    if (detectPpuk(flipped, this.state.field)) {
-      const result = applyPpuk(flipped, this.state.field);
-      this.state = updateState(this.state, {
-        field: result.remainingField,
-        [captureKey]: [...this.state[captureKey], ...result.captured],
-        phase: 'match-deck',
-      });
-      playSound('card-match');
-      this.checkScoreAfterTurn();
-      return;
-    }
-
-    const matchResult = applyMatch(flipped, this.state.field);
-
-    if (matchResult.requiresChoice && matchResult.matchingCards) {
-      const bestMatch = this.pickBestMatch(matchResult.matchingCards);
-      this.state = updateState(this.state, {
-        field: this.state.field.filter((f) => f.id !== bestMatch.id),
-        [captureKey]: [...this.state[captureKey], flipped, bestMatch],
-        phase: 'match-deck',
-      });
-      playSound('card-match');
-    } else if (matchResult.captured.length > 0) {
-      this.state = updateState(this.state, {
-        field: matchResult.remainingField,
-        [captureKey]: [...this.state[captureKey], ...matchResult.captured],
-        phase: 'match-deck',
-      });
-      playSound('card-match');
-    } else {
-      this.state = updateState(this.state, {
-        field: matchResult.remainingField,
-        phase: 'match-deck',
-      });
-    }
-
+    this.applyCardToField(flipped, captureKey, opponentCaptureKey, { phase: 'match-deck' });
     this.checkScoreAfterTurn();
   }
 
@@ -433,7 +387,7 @@ class Game {
     }
 
     const score = calculateScore(currentCapture);
-    if (score >= 7) {
+    if (score >= GO_STOP_THRESHOLD) {
       this.state = updateState(this.state, { phase: 'go-stop' });
       this.renderAll();
 
@@ -501,14 +455,12 @@ class Game {
   }
 
   private getAiMove(): Card {
-    switch (this.difficulty) {
-      case 'easy':
-        return easySelectMove(this.state, this.state.aiHand, this.state.field);
-      case 'medium':
-        return mediumSelectMove(this.state, this.state.aiHand, this.state.field);
-      case 'hard':
-        return hardSelectMove(this.state, this.state.aiHand, this.state.field, this.knownCards);
-    }
+    return this.aiPlayer.selectMove(
+      this.state,
+      this.state.aiHand,
+      this.state.field,
+      this.knownCards,
+    );
   }
 
   private aiGoStopDecision(): void {
@@ -516,30 +468,18 @@ class Game {
     const aiScore = calculateScore(aiCapture);
     const playerScore = calculateScore(this.state.playerCapture);
 
-    let decision: 'go' | 'stop';
+    const fallbackCard = this.state.aiHand[0] ?? this.state.field[0];
+    const expected = fallbackCard
+      ? calculateExpectedScore(
+          this.state,
+          fallbackCard,
+          this.state.aiHand,
+          this.state.field,
+          this.knownCards,
+        )
+      : aiScore;
 
-    switch (this.difficulty) {
-      case 'easy':
-        decision = easySelectGoStop(aiScore);
-        break;
-      case 'medium':
-        decision = mediumSelectGoStop(aiScore, aiScore, playerScore);
-        break;
-      case 'hard': {
-        const fallbackCard = this.state.aiHand[0] ?? this.state.field[0];
-        const expected = fallbackCard
-          ? calculateExpectedScore(
-              this.state,
-              fallbackCard,
-              this.state.aiHand,
-              this.state.field,
-              this.knownCards,
-            )
-          : aiScore;
-        decision = hardSelectGoStop(aiScore, aiScore, playerScore, expected);
-        break;
-      }
-    }
+    const decision = this.aiPlayer.selectGoStop(aiScore, aiScore, playerScore, expected);
 
     if (decision === 'go') {
       this.state = selectGo(this.state);
@@ -577,8 +517,8 @@ class Game {
 
     const shakeMult = this.state.shakingMultiplier;
 
-    const playerBonus = applyBonus(playerScoreObj, aiScoreObj, playerCategorized, aiCategorized);
-    const aiBonus = applyBonus(aiScoreObj, playerScoreObj, aiCategorized, playerCategorized);
+    const playerBonus = applyBonus(playerScoreObj, aiScoreObj, aiCategorized);
+    const aiBonus = applyBonus(aiScoreObj, playerScoreObj, playerCategorized);
 
     const playerFinal = playerBonus.finalScore * playerGoMult * shakeMult + playerComboScore;
     const aiFinal = aiBonus.finalScore * aiGoMult + aiComboScore;
@@ -683,30 +623,37 @@ class Game {
     }
   }
 
-  private renderPlayerCapture(): void {
-    this.destroyComponents(this.playerCaptureComponents);
-    this.playerCaptureComponents = [];
-    this.playerCaptureEl.innerHTML = '';
+  private renderCapture(
+    cards: Card[],
+    components: CardComponent[],
+    el: HTMLElement,
+  ): CardComponent[] {
+    this.destroyComponents(components);
+    el.innerHTML = '';
 
     const cardGroup = new CardGroup({
-      cards: this.state.playerCapture,
+      cards,
       isSelectable: false,
     });
-    this.playerCaptureComponents.push(...cardGroup.getCardComponents());
-    this.playerCaptureEl.appendChild(cardGroup.getElement());
+    const newComponents = [...cardGroup.getCardComponents()];
+    el.appendChild(cardGroup.getElement());
+    return newComponents;
+  }
+
+  private renderPlayerCapture(): void {
+    this.playerCaptureComponents = this.renderCapture(
+      this.state.playerCapture,
+      this.playerCaptureComponents,
+      this.playerCaptureEl,
+    );
   }
 
   private renderAiCapture(): void {
-    this.destroyComponents(this.aiCaptureComponents);
-    this.aiCaptureComponents = [];
-    this.aiCaptureEl.innerHTML = '';
-
-    const cardGroup = new CardGroup({
-      cards: this.state.aiCapture,
-      isSelectable: false,
-    });
-    this.aiCaptureComponents.push(...cardGroup.getCardComponents());
-    this.aiCaptureEl.appendChild(cardGroup.getElement());
+    this.aiCaptureComponents = this.renderCapture(
+      this.state.aiCapture,
+      this.aiCaptureComponents,
+      this.aiCaptureEl,
+    );
   }
 
   private renderDeck(): void {
@@ -749,17 +696,12 @@ class Game {
 
   private setDifficulty(d: Difficulty): void {
     this.difficulty = d;
+    this.aiPlayer = createAiPlayer(d);
   }
 
   private pickBestMatch(cards: Card[]): Card {
-    const typeValues: Record<CardType, number> = {
-      [CardType.Gwang]: 20,
-      [CardType.Yeol]: 10,
-      [CardType.Tti]: 5,
-      [CardType.Pi]: 1,
-    };
     return cards.reduce((best, current) =>
-      typeValues[current.type] > typeValues[best.type] ? current : best,
+      CARD_TYPE_VALUES[current.type] > CARD_TYPE_VALUES[best.type] ? current : best,
     );
   }
 

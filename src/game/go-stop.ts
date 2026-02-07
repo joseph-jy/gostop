@@ -1,7 +1,8 @@
 import { GameState, switchTurn, updateState } from './state';
+import { GO_STOP_THRESHOLD } from './constants';
 
 export function canGoOrStop(score: number): boolean {
-  return score >= 7;
+  return score >= GO_STOP_THRESHOLD;
 }
 
 export function selectGo(state: GameState): GameState {
@@ -27,12 +28,4 @@ export function selectStop(state: GameState): GameState {
 
 export function calculateGoMultiplier(goCount: number): number {
   return Math.pow(2, goCount);
-}
-
-export function handleReversal(
-  state: GameState,
-  _playerScore: number,
-  _opponentGo: number
-): GameState {
-  return state;
 }

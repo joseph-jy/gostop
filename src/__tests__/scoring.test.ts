@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Card, CardType, Month } from '../game/cards';
+import { CardType, Month } from '../game/cards';
 import {
   calculatePiScore,
   calculateGwangScore,
@@ -10,13 +10,10 @@ import {
   type CapturedCards,
   type PlayerScore,
 } from '../game/scoring';
+import { createCard as _createCard } from './test-helpers';
 
-const createCard = (id: string, type: CardType, month: Month): Card => ({
-  id,
-  month,
-  type,
-  imagePath: `cards/${id}.png`,
-});
+// Wrapper to preserve original (id, type, month) argument order in this file
+const createCard = (id: string, type: CardType, month: Month) => _createCard(id, month, type);
 
 describe('Pi Scoring (피)', () => {
   it('should return 0 for less than 10 pi cards', () => {
@@ -262,23 +259,6 @@ describe('Total Score Calculation', () => {
 });
 
 describe('Bonus Multipliers', () => {
-  const basePlayerCapture: CapturedCards = {
-    gwang: [
-      createCard('january-gwang', CardType.Gwang, Month.January),
-      createCard('march-gwang', CardType.Gwang, Month.March),
-      createCard('august-gwang', CardType.Gwang, Month.August),
-    ],
-    yeol: Array.from({ length: 5 }, (_, i) =>
-      createCard(`yeol-${i}`, CardType.Yeol, Month.January)
-    ),
-    tti: Array.from({ length: 5 }, (_, i) =>
-      createCard(`tti-${i}`, CardType.Tti, Month.January)
-    ),
-    pi: Array.from({ length: 10 }, (_, i) =>
-      createCard(`pi-${i}`, CardType.Pi, Month.January)
-    ),
-  };
-
   const basePlayerScore: PlayerScore = {
     gwang: 3,
     yeol: 1,
@@ -312,7 +292,6 @@ describe('Bonus Multipliers', () => {
       const result = applyBonus(
         basePlayerScore,
         opponentScore,
-        basePlayerCapture,
         opponentCapture
       );
       expect(result.finalScore).toBe(12); // 6 * 2
@@ -343,7 +322,6 @@ describe('Bonus Multipliers', () => {
       const result = applyBonus(
         basePlayerScore,
         opponentScore,
-        basePlayerCapture,
         opponentCapture
       );
       expect(result.finalScore).toBe(6);
@@ -372,7 +350,6 @@ describe('Bonus Multipliers', () => {
       const result = applyBonus(
         basePlayerScore,
         opponentScore,
-        basePlayerCapture,
         opponentCapture
       );
       expect(result.finalScore).toBe(12); // 6 * 2
@@ -403,7 +380,6 @@ describe('Bonus Multipliers', () => {
       const result = applyBonus(
         basePlayerScore,
         opponentScore,
-        basePlayerCapture,
         opponentCapture
       );
       expect(result.finalScore).toBe(6);
@@ -436,7 +412,6 @@ describe('Bonus Multipliers', () => {
       const result = applyBonus(
         basePlayerScore,
         opponentScore,
-        basePlayerCapture,
         opponentCapture
       );
       expect(result.finalScore).toBe(12); // 6 * 2
@@ -467,7 +442,6 @@ describe('Bonus Multipliers', () => {
       const result = applyBonus(
         basePlayerScore,
         opponentScore,
-        basePlayerCapture,
         opponentCapture
       );
       expect(result.finalScore).toBe(6);
@@ -494,7 +468,6 @@ describe('Bonus Multipliers', () => {
       const result = applyBonus(
         basePlayerScore,
         opponentScore,
-        basePlayerCapture,
         opponentCapture
       );
       expect(result.finalScore).toBe(24); // 6 * 2 * 2
@@ -520,7 +493,6 @@ describe('Bonus Multipliers', () => {
       const result = applyBonus(
         basePlayerScore,
         opponentScore,
-        basePlayerCapture,
         opponentCapture
       );
       expect(result.finalScore).toBe(48); // 6 * 2 * 2 * 2

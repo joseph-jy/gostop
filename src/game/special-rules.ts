@@ -10,38 +10,29 @@ export function detectPpuk(card: Card, field: Card[]): boolean {
   return sameMonthCards.length === 3;
 }
 
-export function detectBomb(hand: Card[]): Month[] {
+function findMonthsByCount(hand: Card[], targetCount: number): Month[] {
   const monthCounts = new Map<Month, number>();
 
   for (const card of hand) {
     monthCounts.set(card.month, (monthCounts.get(card.month) || 0) + 1);
   }
 
-  const bombMonths: Month[] = [];
+  const months: Month[] = [];
   for (const [month, count] of monthCounts.entries()) {
-    if (count === 3) {
-      bombMonths.push(month);
+    if (count === targetCount) {
+      months.push(month);
     }
   }
 
-  return bombMonths;
+  return months;
+}
+
+export function detectBomb(hand: Card[]): Month[] {
+  return findMonthsByCount(hand, 3);
 }
 
 export function detectChongtong(hand: Card[]): Month[] {
-  const monthCounts = new Map<Month, number>();
-
-  for (const card of hand) {
-    monthCounts.set(card.month, (monthCounts.get(card.month) || 0) + 1);
-  }
-
-  const chongtongMonths: Month[] = [];
-  for (const [month, count] of monthCounts.entries()) {
-    if (count === 4) {
-      chongtongMonths.push(month);
-    }
-  }
-
-  return chongtongMonths;
+  return findMonthsByCount(hand, 4);
 }
 
 export function canShake(card: Card, hand: Card[], field: Card[]): boolean {

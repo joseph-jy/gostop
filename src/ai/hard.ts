@@ -1,16 +1,9 @@
 import { Card, CardType, CARDS } from '../game/cards';
 import { GameState } from '../game/state';
 import { getValidMoves, findMatchingCards, applyMatch } from '../game/matching';
+import { CARD_TYPE_VALUES, DOUBLE_PI_IDS } from '../game/constants';
 
 const MONTE_CARLO_SIMULATIONS = 50;
-const CARD_TYPE_VALUES: Record<CardType, number> = {
-  [CardType.Gwang]: 20,
-  [CardType.Yeol]: 10,
-  [CardType.Tti]: 5,
-  [CardType.Pi]: 1,
-};
-
-const DOUBLE_PI_IDS = ['november-pi-1', 'december-pi-1'];
 
 function getCardValue(card: Card): number {
   const baseValue = CARD_TYPE_VALUES[card.type];
@@ -121,7 +114,7 @@ export function selectMove(
   field: Card[],
   knownCards: Card[]
 ): Card {
-  const validMoves = getValidMoves(hand, field);
+  const validMoves = getValidMoves(hand);
 
   if (validMoves.length === 0) {
     return hand[0];

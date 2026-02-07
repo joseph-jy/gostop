@@ -11,7 +11,7 @@ export function findMatchingCards(card: Card, field: Card[]): Card[] {
   return field.filter((fieldCard) => fieldCard.month === card.month);
 }
 
-export function getValidMoves(hand: Card[], _field: Card[]): Card[] {
+export function getValidMoves(hand: Card[]): Card[] {
   return [...hand];
 }
 

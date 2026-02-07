@@ -1,11 +1,7 @@
 import { Card, CardType } from '../game/cards';
 import { GameState } from '../game/state';
 import { getValidMoves, findMatchingCards } from '../game/matching';
-
-const GODORI_CARDS = ['february-bird', 'april-bird', 'august-animal'];
-const HONGDAN_CARDS = ['january-hongdan', 'february-hongdan', 'march-hongdan'];
-const CHEONGDAN_CARDS = ['june-cheongdan', 'september-chodan', 'october-chodan'];
-const CHODAN_CARDS = ['april-hongdan', 'may-hongdan', 'july-chodan'];
+import { GODORI_IDS, HONGDAN_IDS, CHEONGDAN_IDS, CHODAN_IDS } from '../game/combos';
 
 function canCompleteCombo(card: Card, aiCapture: Card[], field: Card[]): boolean {
   const matchingCards = findMatchingCards(card, field);
@@ -16,16 +12,16 @@ function canCompleteCombo(card: Card, aiCapture: Card[], field: Card[]): boolean
   const potentialCapture = [...aiCapture, card, ...matchingCards];
   const capturedIds = potentialCapture.map(c => c.id);
 
-  const hasGodori = GODORI_CARDS.every(id => capturedIds.includes(id));
-  const hasHongdan = HONGDAN_CARDS.every(id => capturedIds.includes(id));
-  const hasCheongdan = CHEONGDAN_CARDS.every(id => capturedIds.includes(id));
-  const hasChodan = CHODAN_CARDS.every(id => capturedIds.includes(id));
+  const hasGodori = GODORI_IDS.every(id => capturedIds.includes(id));
+  const hasHongdan = HONGDAN_IDS.every(id => capturedIds.includes(id));
+  const hasCheongdan = CHEONGDAN_IDS.every(id => capturedIds.includes(id));
+  const hasChodan = CHODAN_IDS.every(id => capturedIds.includes(id));
 
   const currentCapturedIds = aiCapture.map(c => c.id);
-  const currentHasGodori = GODORI_CARDS.every(id => currentCapturedIds.includes(id));
-  const currentHasHongdan = HONGDAN_CARDS.every(id => currentCapturedIds.includes(id));
-  const currentHasCheongdan = CHEONGDAN_CARDS.every(id => currentCapturedIds.includes(id));
-  const currentHasChodan = CHODAN_CARDS.every(id => currentCapturedIds.includes(id));
+  const currentHasGodori = GODORI_IDS.every(id => currentCapturedIds.includes(id));
+  const currentHasHongdan = HONGDAN_IDS.every(id => currentCapturedIds.includes(id));
+  const currentHasCheongdan = CHEONGDAN_IDS.every(id => currentCapturedIds.includes(id));
+  const currentHasChodan = CHODAN_IDS.every(id => currentCapturedIds.includes(id));
 
   return (
     (hasGodori && !currentHasGodori) ||
@@ -35,8 +31,8 @@ function canCompleteCombo(card: Card, aiCapture: Card[], field: Card[]): boolean
   );
 }
 
-export function selectMove(state: GameState, hand: Card[], field: Card[]): Card {
-  const validMoves = getValidMoves(hand, field);
+export function selectMove(state: GameState, hand: Card[], field: Card[], _knownCards: Card[]): Card {
+  const validMoves = getValidMoves(hand);
 
   if (validMoves.length === 0) {
     return hand[0];
@@ -69,7 +65,8 @@ export function selectMove(state: GameState, hand: Card[], field: Card[]): Card 
 export function selectGoStop(
   score: number,
   myScore: number,
-  opponentScore: number
+  opponentScore: number,
+  _expectedScore: number
 ): 'go' | 'stop' {
   const lead = myScore - opponentScore;
 

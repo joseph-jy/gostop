@@ -90,7 +90,7 @@ function simulateGame(hardIsPlayer: boolean): 'hard' | 'easy' | 'draw' {
       if (isHardTurn) {
         decision = hardSelectGoStop(currentScore, currentScore, opponentScore, currentScore + 2);
       } else {
-        decision = easySelectGoStop(currentScore);
+        decision = easySelectGoStop(currentScore, currentScore, opponentScore, currentScore);
       }
 
       if (decision === 'stop') {

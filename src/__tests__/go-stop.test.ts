@@ -4,33 +4,9 @@ import {
   selectGo,
   selectStop,
   calculateGoMultiplier,
-  handleReversal,
 } from '../game/go-stop';
-import { GameState } from '../game/state';
-import { Card, CardType, Month } from '../game/cards';
-
-function createTestCard(id: string, month: Month, type: CardType): Card {
-  return { id, month, type, imagePath: `cards/${id}.png` };
-}
-
-function createTestState(overrides?: Partial<GameState>): GameState {
-  return {
-    playerHand: [],
-    aiHand: [],
-    field: [],
-    deck: [],
-    playerCapture: [],
-    aiCapture: [],
-    currentTurn: 'player',
-    phase: 'check-score',
-    goCount: { player: 0, ai: 0 },
-    selectedCard: null,
-    flippedCard: null,
-    lastAction: null,
-    shakingMultiplier: 1,
-    ...overrides,
-  };
-}
+import { CardType, Month } from '../game/cards';
+import { createCard as createTestCard, createMockGameState as createTestState } from './test-helpers';
 
 describe('canGoOrStop', () => {
   it('should return true when score is exactly 7', () => {
@@ -209,93 +185,3 @@ describe('calculateGoMultiplier', () => {
   });
 });
 
-describe('handleReversal', () => {
-  it('should calculate reversal penalty correctly', () => {
-    const state = createTestState({
-      currentTurn: 'player',
-      goCount: { player: 2, ai: 0 },
-    });
-
-    const playerScore = 10;
-    const opponentGo = 0;
-
-    handleReversal(state, playerScore, opponentGo);
-
-    const penalty = playerScore * calculateGoMultiplier(2);
-    expect(penalty).toBe(40);
-  });
-
-  it('should transfer penalty from player to ai when player declared go', () => {
-    const state = createTestState({
-      currentTurn: 'player',
-      goCount: { player: 1, ai: 0 },
-    });
-
-    const playerScore = 8;
-    const opponentGo = 0;
-
-    handleReversal(state, playerScore, opponentGo);
-
-    const penalty = playerScore * calculateGoMultiplier(1);
-    expect(penalty).toBe(16);
-  });
-
-  it('should handle reversal with multiple go declarations', () => {
-    const state = createTestState({
-      currentTurn: 'player',
-      goCount: { player: 3, ai: 0 },
-    });
-
-    const playerScore = 7;
-    const opponentGo = 0;
-
-    handleReversal(state, playerScore, opponentGo);
-
-    const penalty = playerScore * calculateGoMultiplier(3);
-    expect(penalty).toBe(56);
-  });
-
-  it('should handle reversal when opponent also declared go', () => {
-    const state = createTestState({
-      currentTurn: 'player',
-      goCount: { player: 2, ai: 1 },
-    });
-
-    const playerScore = 10;
-    const opponentGo = 1;
-
-    handleReversal(state, playerScore, opponentGo);
-
-    const playerPenalty = playerScore * calculateGoMultiplier(2);
-    const opponentMultiplier = calculateGoMultiplier(1);
-    expect(playerPenalty).toBe(40);
-    expect(opponentMultiplier).toBe(2);
-  });
-
-  it('should not mutate original state', () => {
-    const state = createTestState({
-      currentTurn: 'player',
-      goCount: { player: 1, ai: 0 },
-    });
-
-    const originalGoCount = state.goCount.player;
-    handleReversal(state, 10, 0);
-
-    expect(state.goCount.player).toBe(originalGoCount);
-  });
-
-  it('should handle zero score reversal', () => {
-    const state = createTestState({
-      currentTurn: 'player',
-      goCount: { player: 2, ai: 0 },
-    });
-
-    const playerScore = 0;
-    const opponentGo = 0;
-
-    handleReversal(state, playerScore, opponentGo);
-
-    const penalty = playerScore * calculateGoMultiplier(2);
-    expect(penalty).toBe(0);
-  });
-});

@@ -8,14 +8,7 @@ import {
   getComboScore,
 } from '../game/combos';
 import { Card, CardType, Month } from '../game/cards';
-
-// Helper to create test cards
-const createCard = (id: string, month: Month, type: CardType): Card => ({
-  id,
-  month,
-  type,
-  imagePath: `cards/${id}.png`,
-});
+import { createCard } from './test-helpers';
 
 describe('Combo Detection', () => {
   describe('hasGodori', () => {

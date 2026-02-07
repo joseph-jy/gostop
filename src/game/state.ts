@@ -1,6 +1,7 @@
 import { Card } from './cards';
 import { DealResult } from './deck';
 import { calculateGwangScore, calculateYeolScore, calculateTtiScore, calculatePiScore } from './scoring';
+import { GO_STOP_THRESHOLD } from './constants';
 
 export type Phase =
   | 'waiting'
@@ -104,7 +105,7 @@ export function shouldEnterGoStopPhase(state: GameState): boolean {
   
   const score = calculateScore(currentCapture);
   
-  return score >= 7;
+  return score >= GO_STOP_THRESHOLD;
 }
 
 export function advancePhase(state: GameState): GameState {

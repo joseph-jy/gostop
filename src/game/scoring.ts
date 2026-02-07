@@ -1,4 +1,5 @@
 import { Card, CardType } from './cards';
+import { DOUBLE_PI_IDS } from './constants';
 
 export interface CapturedCards {
   gwang: Card[];
@@ -20,8 +21,6 @@ export interface BonusResult {
   bonuses: string[];
   multiplier: number;
 }
-
-const DOUBLE_PI_IDS = ['november-pi-1', 'december-pi-1'];
 const BIGWANG_ID = 'december-gwang';
 
 export function calculatePiScore(cards: Card[]): number {
@@ -108,7 +107,6 @@ export function calculateTotal(capture: CapturedCards): PlayerScore {
 export function applyBonus(
   playerScore: PlayerScore,
   opponentScore: PlayerScore,
-  _playerCapture: CapturedCards,
   opponentCapture: CapturedCards
 ): BonusResult {
   const bonuses: string[] = [];

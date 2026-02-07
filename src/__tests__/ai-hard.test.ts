@@ -5,8 +5,9 @@ import {
   calculateExpectedScore,
 } from '../ai/hard';
 import { Card, CardType, Month, CARDS } from '../game/cards';
-import { GameState, createInitialState } from '../game/state';
+import { GameState } from '../game/state';
 import { dealCards } from '../game/deck';
+import { createMockGameState } from './test-helpers';
 
 describe('Hard AI', () => {
   let mockState: GameState;
@@ -15,16 +16,20 @@ describe('Hard AI', () => {
 
   beforeEach(() => {
     const dealResult = dealCards(CARDS);
-    mockState = createInitialState(dealResult);
+    mockState = createMockGameState({
+      playerHand: dealResult.playerHand,
+      aiHand: dealResult.aiHand,
+      field: dealResult.field,
+      deck: dealResult.deck,
+      phase: 'select-hand',
+    });
 
-    // Create mock hand with varied cards
     mockHand = [
       { id: 'january-gwang', month: Month.January, type: CardType.Gwang, imagePath: 'test' },
       { id: 'february-yeol', month: Month.February, type: CardType.Yeol, imagePath: 'test' },
       { id: 'march-pi-1', month: Month.March, type: CardType.Pi, imagePath: 'test' },
     ];
 
-    // Create mock field
     mockField = [
       { id: 'january-tti', month: Month.January, type: CardType.Tti, imagePath: 'test' },
       { id: 'april-pi-1', month: Month.April, type: CardType.Pi, imagePath: 'test' },
@@ -45,7 +50,6 @@ describe('Hard AI', () => {
       const gwangScore = calculateExpectedScore(mockState, gwangCard, mockHand, mockField, []);
       const piScore = calculateExpectedScore(mockState, piCard, mockHand, mockField, []);
 
-      // Gwang match should have higher expected value since it matches with field
       expect(gwangScore).toBeGreaterThanOrEqual(piScore);
     });
 
@@ -56,7 +60,6 @@ describe('Hard AI', () => {
       const matchingScore = calculateExpectedScore(mockState, matchingCard, mockHand, mockField, []);
       const nonMatchingScore = calculateExpectedScore(mockState, nonMatchingCard, mockHand, mockField, []);
 
-      // Card that can capture should have higher expected score
       expect(matchingScore).toBeGreaterThan(nonMatchingScore);
     });
 
@@ -69,7 +72,6 @@ describe('Hard AI', () => {
       const score1 = calculateExpectedScore(mockState, mockHand[0], mockHand, mockField, []);
       const score2 = calculateExpectedScore(mockState, mockHand[0], mockHand, mockField, knownCards);
 
-      // With more known cards, calculation should be different
       expect(typeof score1).toBe('number');
       expect(typeof score2).toBe('number');
     });
@@ -79,7 +81,6 @@ describe('Hard AI', () => {
       calculateExpectedScore(mockState, mockHand[0], mockHand, mockField, []);
       const end = performance.now();
 
-      // Individual calculation should be fast
       expect(end - start).toBeLessThan(500);
     });
   });
@@ -98,8 +99,6 @@ describe('Hard AI', () => {
     });
 
     it('should prefer gwang capture when possible', () => {
-      // Field has january-tti, hand has january-gwang
-      // Should prefer playing january-gwang to capture
       const handWithGwang: Card[] = [
         { id: 'january-gwang', month: Month.January, type: CardType.Gwang, imagePath: 'test' },
         { id: 'may-pi-1', month: Month.May, type: CardType.Pi, imagePath: 'test' },
@@ -111,7 +110,6 @@ describe('Hard AI', () => {
         { id: 'july-pi-1', month: Month.July, type: CardType.Pi, imagePath: 'test' },
       ];
 
-      // Run multiple times to ensure consistent behavior
       let gwangCount = 0;
       for (let i = 0; i < 10; i++) {
         const selectedCard = selectMove(mockState, handWithGwang, fieldWithMatch, []);
@@ -120,7 +118,6 @@ describe('Hard AI', () => {
         }
       }
 
-      // Should strongly prefer gwang capture
       expect(gwangCount).toBeGreaterThan(5);
     });
 
@@ -139,7 +136,6 @@ describe('Hard AI', () => {
     });
 
     it('should handle larger hand within time limit', () => {
-      // Simulate a realistic hand size
       const largerHand: Card[] = [
         { id: 'january-gwang', month: Month.January, type: CardType.Gwang, imagePath: 'test' },
         { id: 'february-yeol', month: Month.February, type: CardType.Yeol, imagePath: 'test' },
@@ -163,7 +159,7 @@ describe('Hard AI', () => {
       const end = performance.now();
 
       expect(selectedCard).toBeDefined();
-      expect(end - start).toBeLessThan(2000); // 2 second limit as per task
+      expect(end - start).toBeLessThan(2000);
     });
   });
 
@@ -174,36 +170,29 @@ describe('Hard AI', () => {
     });
 
     it('should stop when score is high and lead is safe', () => {
-      // Score 10, my total 10, opponent 3, expected 12
-      // Safe lead - should stop
       const result = selectGoStop(10, 10, 3, 12);
       expect(result).toBe('stop');
     });
 
     it('should go when score is low (< 7)', () => {
-      // Need more points
       const results: string[] = [];
       for (let i = 0; i < 10; i++) {
         results.push(selectGoStop(5, 5, 3, 8));
       }
-      // Should mostly go when score is low
       const goCount = results.filter(r => r === 'go').length;
       expect(goCount).toBeGreaterThan(5);
     });
 
     it('should stop when expected score is significantly higher than opponent', () => {
-      // High expected advantage - stop and secure win
       const result = selectGoStop(10, 10, 4, 15);
       expect(result).toBe('stop');
     });
 
     it('should consider going when opponent is close', () => {
-      // Close game - might go for more points
       const results: string[] = [];
       for (let i = 0; i < 20; i++) {
         results.push(selectGoStop(8, 8, 7, 9));
       }
-      // Should have some variance in close games
       expect(results).toContain('go');
     });
 

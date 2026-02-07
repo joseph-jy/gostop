@@ -1,3 +1,5 @@
+import './styles.css';
+
 import { Card, CardType } from '../game/cards';
 import { createDeck, dealCards } from '../game/deck';
 import {

@@ -19,6 +19,7 @@ const SOUND_MAP: Record<GameEvent, string> = {
   'lose': 'assets/sounds/lose.mp3',
 };
 
+const DEFAULT_VOLUME = 0.15;
 const audioCache: Map<GameEvent, HTMLAudioElement> = new Map();
 
 function getAudioElement(event: GameEvent): HTMLAudioElement | null {
@@ -33,6 +34,7 @@ function getAudioElement(event: GameEvent): HTMLAudioElement | null {
   if (!audio) {
     try {
       audio = new Audio(path);
+      audio.volume = DEFAULT_VOLUME;
       audioCache.set(event, audio);
     } catch (error) {
       console.error(`Failed to load audio for event ${event}:`, error);

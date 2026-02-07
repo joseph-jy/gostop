@@ -574,10 +574,14 @@ class Game {
     const isSelectPhase =
       this.state.phase === 'select-hand' && this.state.currentTurn === 'player';
 
+    const fieldMonths = new Set(this.state.field.map((c) => c.month));
+
     for (const card of this.state.playerHand) {
+      const isHint = isSelectPhase && fieldMonths.has(card.month);
       const comp = new CardComponent({
         card,
         isSelectable: isSelectPhase,
+        isHint,
         onClick: (c) => this.handlePlayerCardClick(c),
       });
       this.playerCardComponents.push(comp);

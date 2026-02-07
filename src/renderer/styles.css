@@ -278,11 +278,21 @@ body::before {
   box-shadow: var(--shadow-card);
 }
 
-.card--hint {
+/* Hint for field cards (non-selectable) — stronger glow */
+.card--hint:not(.card--selectable) {
   border-color: var(--dancheong-yellow);
   box-shadow:
     0 0 0 2px var(--dancheong-yellow),
     0 0 12px rgba(212, 168, 64, 0.5),
+    var(--shadow-card);
+}
+
+/* Hint for hand cards (selectable) — subtle yellow border */
+.card--hint.card--selectable {
+  border-color: rgba(212, 168, 64, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(212, 168, 64, 0.35),
+    0 0 8px rgba(212, 168, 64, 0.2),
     var(--shadow-card);
 }
 
@@ -363,14 +373,42 @@ body::before {
   transform: scale(0.75);
 }
 
+/* Capture zone: horizontal inline layout */
+.capture-zone .card-group {
+  flex-direction: row;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.capture-zone .card-group__container {
+  flex-direction: row;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.capture-zone .card-group__type-section {
+  flex-direction: row;
+  gap: 0;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(139, 96, 66, 0.15);
+  padding-right: var(--space-sm);
+}
+
+.capture-zone .card-group__type-section:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
 .capture-zone .card-group__type-section > div {
   display: flex;
   gap: 0;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .capture-zone .card-group__type-section .card {
-  margin-left: -60px;
+  margin-left: -22px;
+  flex-shrink: 0;
 }
 
 .capture-zone .card-group__type-section .card:first-child {
@@ -378,7 +416,7 @@ body::before {
 }
 
 .capture-zone .card-group__type-section .card:hover {
-  transform: translateY(-8px) scale(1.1);
+  transform: translateY(-4px) scale(1.1);
   z-index: 10;
 }
 
@@ -964,18 +1002,20 @@ body::before {
 /* Capture zone */
 .capture-zone {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: var(--space-sm);
-  min-height: 48px;
+  flex-wrap: nowrap;
+  gap: 0;
+  padding: var(--space-xs) var(--space-sm);
+  min-height: 40px;
   background: rgba(0, 0, 0, 0.10);
   border-radius: var(--radius-md);
   border: 1px solid rgba(139, 96, 66, 0.12);
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .capture-zone .card {
-  --card-width: 48px;
-  --card-height: 78px;
+  --card-width: 36px;
+  --card-height: 58px;
   width: var(--card-width);
   height: var(--card-height);
 }

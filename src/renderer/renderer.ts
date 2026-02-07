@@ -13,12 +13,10 @@ import {
 } from '../game/state';
 import { applyMatch } from '../game/matching';
 import {
-  detectJjok,
   detectPpuk,
   detectBomb,
   detectChongtong,
   canShake,
-  applyJjok,
   applyPpuk,
   applyBomb,
   applyChongtong,
@@ -274,28 +272,9 @@ class Game {
   private applyCardToField(
     card: Card,
     captureKey: 'playerCapture' | 'aiCapture',
-    opponentCaptureKey: 'playerCapture' | 'aiCapture',
+    _opponentCaptureKey: 'playerCapture' | 'aiCapture',
     extraUpdates: Partial<GameState> = {},
   ): boolean {
-    if (detectJjok(card, this.state.field)) {
-      const result = applyJjok(
-        card,
-        this.state.field,
-        getPiCards(this.state[opponentCaptureKey]),
-      );
-      const opponentWithoutStolen = this.state[opponentCaptureKey].filter(
-        (c) => !result.stolenPi.some((s) => s.id === c.id),
-      );
-      this.state = updateState(this.state, {
-        field: result.remainingField,
-        [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
-        [opponentCaptureKey]: opponentWithoutStolen,
-        ...extraUpdates,
-      });
-      playSound('card-match');
-      return true;
-    }
-
     if (detectPpuk(card, this.state.field)) {
       const result = applyPpuk(card, this.state.field);
       this.state = updateState(this.state, {
@@ -349,28 +328,8 @@ class Game {
 
   private matchHandCard(card: Card, turn: 'player' | 'ai'): void {
     const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
-    const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
 
-    // Jjok (2장 매칭) or Ppuk (3장 매칭): 즉시 캡처, 쌌다 불가
-    if (detectJjok(card, this.state.field)) {
-      const result = applyJjok(
-        card,
-        this.state.field,
-        getPiCards(this.state[opponentCaptureKey]),
-      );
-      const opponentWithoutStolen = this.state[opponentCaptureKey].filter(
-        (c) => !result.stolenPi.some((s) => s.id === c.id),
-      );
-      this.state = updateState(this.state, {
-        field: result.remainingField,
-        [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
-        [opponentCaptureKey]: opponentWithoutStolen,
-      });
-      playSound('card-match');
-      this.proceedToFlipDeck();
-      return;
-    }
-
+    // Ppuk (3장 매칭): 즉시 캡처, 쌌다 불가
     if (detectPpuk(card, this.state.field)) {
       const result = applyPpuk(card, this.state.field);
       this.state = updateState(this.state, {

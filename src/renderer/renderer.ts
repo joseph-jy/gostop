@@ -41,6 +41,7 @@ import {
 } from '../ai/hard';
 
 import CardComponent from './components/Card';
+import CardGroup from './components/CardGroup';
 import ScoreBoard from './components/ScoreBoard';
 import Controls, { type Difficulty } from './components/Controls';
 import Stats, { type StatsComponentProps } from './components/Stats';
@@ -676,7 +677,7 @@ class Game {
         isSelectable: false,
       });
       const el = comp.getElement();
-      el.style.background = 'var(--dancheong-red)';
+      el.classList.add('card--disabled');
       const img = el.querySelector('img');
       if (img) img.style.visibility = 'hidden';
       this.aiCardComponents.push(comp);
@@ -689,10 +690,14 @@ class Game {
     this.fieldCardComponents = [];
     this.fieldEl.innerHTML = '';
 
+    const playerHandMonths = new Set(this.state.playerHand.map((c) => c.month));
+
     for (const card of this.state.field) {
+      const isHint = playerHandMonths.has(card.month);
       const comp = new CardComponent({
         card,
         isSelectable: false,
+        isHint,
       });
       this.fieldCardComponents.push(comp);
       this.fieldEl.appendChild(comp.getElement());
@@ -704,14 +709,12 @@ class Game {
     this.playerCaptureComponents = [];
     this.playerCaptureEl.innerHTML = '';
 
-    for (const card of this.state.playerCapture) {
-      const comp = new CardComponent({
-        card,
-        isSelectable: false,
-      });
-      this.playerCaptureComponents.push(comp);
-      this.playerCaptureEl.appendChild(comp.getElement());
-    }
+    const cardGroup = new CardGroup({
+      cards: this.state.playerCapture,
+      isSelectable: false,
+    });
+    this.playerCaptureComponents.push(...cardGroup.getCardComponents());
+    this.playerCaptureEl.appendChild(cardGroup.getElement());
   }
 
   private renderAiCapture(): void {
@@ -719,14 +722,12 @@ class Game {
     this.aiCaptureComponents = [];
     this.aiCaptureEl.innerHTML = '';
 
-    for (const card of this.state.aiCapture) {
-      const comp = new CardComponent({
-        card,
-        isSelectable: false,
-      });
-      this.aiCaptureComponents.push(comp);
-      this.aiCaptureEl.appendChild(comp.getElement());
-    }
+    const cardGroup = new CardGroup({
+      cards: this.state.aiCapture,
+      isSelectable: false,
+    });
+    this.aiCaptureComponents.push(...cardGroup.getCardComponents());
+    this.aiCaptureEl.appendChild(cardGroup.getElement());
   }
 
   private renderDeck(): void {

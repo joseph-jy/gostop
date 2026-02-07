@@ -278,6 +278,22 @@ body::before {
   box-shadow: var(--shadow-card);
 }
 
+.card--hint {
+  border-color: var(--dancheong-yellow);
+  box-shadow:
+    0 0 0 2px var(--dancheong-yellow),
+    0 0 12px rgba(212, 168, 64, 0.5),
+    var(--shadow-card);
+}
+
+.card--hint.card--selectable:hover {
+  border-color: #f0c850;
+  box-shadow:
+    0 0 0 3px #f0c850,
+    0 0 20px rgba(240, 200, 80, 0.6),
+    var(--shadow-card-hover);
+}
+
 /* ── Card deal animation ───────────────────────────────────── */
 @keyframes card-deal-in {
   from {
@@ -305,15 +321,65 @@ body::before {
   animation: card-flip 0.5s var(--ease-out-expo);
 }
 
-/* ── Card capture animation ────────────────────────────────── */
-@keyframes card-capture {
-  0%   { transform: scale(1); opacity: 1; }
-  50%  { transform: scale(1.15); opacity: 0.8; }
-  100% { transform: scale(0.3); opacity: 0; }
-}
-
 .card[data-capturing="true"] {
   animation: card-capture 0.4s var(--ease-out-expo) forwards;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   CARD GROUP COMPONENT
+   ═══════════════════════════════════════════════════════════════ */
+
+.card-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.card-group__container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.card-group__type-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.card-group__type-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--parchment-dark);
+  opacity: 0.7;
+}
+
+.card-group__type-section .card__type-badge {
+  opacity: 0.6;
+  transform: scale(0.75);
+}
+
+.capture-zone .card-group__type-section > div {
+  display: flex;
+  gap: 0;
+  align-items: center;
+}
+
+.capture-zone .card-group__type-section .card {
+  margin-left: -60px;
+}
+
+.capture-zone .card-group__type-section .card:first-child {
+  margin-left: 0;
+}
+
+.capture-zone .card-group__type-section .card:hover {
+  transform: translateY(-8px) scale(1.1);
+  z-index: 10;
 }
 
 

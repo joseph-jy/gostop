@@ -5,6 +5,7 @@ export interface CardComponentProps {
   onClick?: (card: Card) => void;
   isSelectable?: boolean;
   isSelected?: boolean;
+  isHint?: boolean;
 }
 
 const CSS = {
@@ -12,6 +13,7 @@ const CSS = {
   selectable: 'card--selectable',
   selected: 'card--selected',
   disabled: 'card--disabled',
+  hint: 'card--hint',
   image: 'card__image',
   typeBadge: 'card__type-badge',
 } as const;
@@ -70,7 +72,7 @@ export default class CardComponent {
   }
 
   private applyProps(): void {
-    const { card, isSelectable = true, isSelected = false } = this.props;
+    const { card, isSelectable = true, isSelected = false, isHint = false } = this.props;
 
     this.imgEl.src = card.imagePath;
     this.imgEl.alt = `${card.month}월 ${card.type} 카드`;
@@ -84,12 +86,13 @@ export default class CardComponent {
     this.el.classList.toggle(CSS.selectable, isSelectable);
     this.el.classList.toggle(CSS.selected, isSelected);
     this.el.classList.toggle(CSS.disabled, !isSelectable);
+    this.el.classList.toggle(CSS.hint, isHint);
 
     this.el.disabled = !isSelectable;
     this.el.setAttribute('aria-pressed', String(isSelected));
     this.el.setAttribute(
       'aria-label',
-      `${card.month}월 ${CardComponent.getTypeBadgeLabel(card.type)} 카드${isSelected ? ' (선택됨)' : ''}`,
+      `${card.month}월 ${CardComponent.getTypeBadgeLabel(card.type)} 카드${isSelected ? ' (선택됨)' : ''}${isHint ? ' (맞출 수 있음)' : ''}`,
     );
   }
 

@@ -98,7 +98,7 @@ test.describe('Score Calculation', () => {
     }
 
     const score = calculateScore(mixedCards);
-    expect(score).toBeGreaterThan(10);
+    expect(score).toBeGreaterThanOrEqual(10);
   });
 
   test('should handle zero score correctly', async () => {

@@ -126,7 +126,7 @@ test.describe('Edge Case Tests', () => {
         createTestCard('opponent-pi', Month.February, CardType.Pi),
       ];
 
-      const result = applyBomb(hand, field, opponentPi, Month.January);
+      const result = applyBomb(Month.January, hand, field, opponentPi);
 
       expect(result.captured.length).toBe(4);
       expect(result.stolenPi.length).toBe(1);
@@ -173,7 +173,7 @@ test.describe('Edge Case Tests', () => {
         createTestCard('opponent-pi-2', Month.March, CardType.Pi),
       ];
 
-      const result = applyChongtong(hand, opponentPi, Month.January);
+      const result = applyChongtong(Month.January, hand, opponentPi);
 
       expect(result.captured.length).toBe(4);
       expect(result.stolenPi.length).toBe(2);
@@ -196,13 +196,13 @@ test.describe('Edge Case Tests', () => {
     });
 
     test('should double multiplier on successful shake', async () => {
-      const result = applyShake(1, true);
+      const result = applyShake(true, 1);
       expect(result.multiplier).toBe(2);
       expect(result.success).toBe(true);
     });
 
     test('should reset multiplier on failed shake', async () => {
-      const result = applyShake(4, false);
+      const result = applyShake(false, 4);
       expect(result.multiplier).toBe(1);
       expect(result.success).toBe(false);
     });
@@ -210,15 +210,15 @@ test.describe('Edge Case Tests', () => {
     test('should stack multiple successful shakes', async () => {
       let currentMultiplier = 1;
 
-      const result1 = applyShake(currentMultiplier, true);
+      const result1 = applyShake(true, currentMultiplier);
       currentMultiplier = result1.multiplier;
       expect(currentMultiplier).toBe(2);
 
-      const result2 = applyShake(currentMultiplier, true);
+      const result2 = applyShake(true, currentMultiplier);
       currentMultiplier = result2.multiplier;
       expect(currentMultiplier).toBe(4);
 
-      const result3 = applyShake(currentMultiplier, true);
+      const result3 = applyShake(true, currentMultiplier);
       currentMultiplier = result3.multiplier;
       expect(currentMultiplier).toBe(8);
     });

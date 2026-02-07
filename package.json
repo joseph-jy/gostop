@@ -21,6 +21,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "@vitest/coverage-v8": "^4.0.18",
     "electron": "^40.1.0",
     "electron-builder": "^26.7.0",

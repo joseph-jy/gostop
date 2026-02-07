@@ -21,7 +21,7 @@ export interface BonusResult {
   multiplier: number;
 }
 
-const DOUBLE_PI_IDS = ['november-pi-double', 'december-pi-double'];
+const DOUBLE_PI_IDS = ['november-pi-1', 'december-pi-1'];
 const BIGWANG_ID = 'december-gwang';
 
 export function calculatePiScore(cards: Card[]): number {

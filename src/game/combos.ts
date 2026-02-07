@@ -2,29 +2,37 @@ import { Card } from './cards';
 
 export type ComboName = 'godori' | 'hongdan' | 'cheongdan' | 'chodan';
 
+// 고도리: 2월, 4월, 8월의 열끗(새/동물 카드)
+const GODORI_IDS = ['february-bird', 'april-bird', 'august-animal'];
+
+// 홍단: 1월, 2월, 3월의 띠
+const HONGDAN_IDS = ['january-hongdan', 'february-hongdan', 'march-hongdan'];
+
+// 청단: 6월, 9월, 10월의 띠
+const CHEONGDAN_IDS = ['june-cheongdan', 'september-chodan', 'october-chodan'];
+
+// 초단: 4월, 5월, 7월의 띠
+const CHODAN_IDS = ['april-hongdan', 'may-hongdan', 'july-chodan'];
+
 export function hasGodori(cards: Card[]): boolean {
-  const requiredCardIds = ['february-yeol', 'april-yeol', 'august-yeol'];
-  return requiredCardIds.every(id => cards.some(card => card.id === id));
+  return GODORI_IDS.every(id => cards.some(card => card.id === id));
 }
 
 export function hasCheongdan(cards: Card[]): boolean {
-  const requiredCardIds = ['june-tti', 'september-tti', 'october-tti'];
-  return requiredCardIds.every(id => cards.some(card => card.id === id));
+  return CHEONGDAN_IDS.every(id => cards.some(card => card.id === id));
 }
 
 export function hasHongdan(cards: Card[]): boolean {
-  const requiredCardIds = ['january-tti', 'february-tti', 'march-tti'];
-  return requiredCardIds.every(id => cards.some(card => card.id === id));
+  return HONGDAN_IDS.every(id => cards.some(card => card.id === id));
 }
 
 export function hasChodan(cards: Card[]): boolean {
-  const requiredCardIds = ['april-tti', 'may-tti', 'july-tti'];
-  return requiredCardIds.every(id => cards.some(card => card.id === id));
+  return CHODAN_IDS.every(id => cards.some(card => card.id === id));
 }
 
 export function getCombos(cards: Card[]): ComboName[] {
   const combos: ComboName[] = [];
-  
+
   if (hasGodori(cards)) {
     combos.push('godori');
   }
@@ -37,7 +45,7 @@ export function getCombos(cards: Card[]): ComboName[] {
   if (hasCheongdan(cards)) {
     combos.push('cheongdan');
   }
-  
+
   return combos;
 }
 

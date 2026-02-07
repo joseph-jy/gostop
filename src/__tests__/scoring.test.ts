@@ -40,9 +40,9 @@ describe('Pi Scoring (피)', () => {
     expect(calculatePiScore(cards)).toBe(2);
   });
 
-  it('should count 쌍피 (november-pi-double) as 2 cards', () => {
+  it('should count 쌍피 (november-pi-1) as 2 cards', () => {
     const cards = [
-      createCard('november-pi-double', CardType.Pi, Month.November),
+      createCard('november-pi-1', CardType.Pi, Month.November),
       ...Array.from({ length: 8 }, (_, i) =>
         createCard(`pi-${i}`, CardType.Pi, Month.January)
       ),
@@ -51,9 +51,9 @@ describe('Pi Scoring (피)', () => {
     expect(calculatePiScore(cards)).toBe(1);
   });
 
-  it('should count 쌍피 (december-pi-double) as 2 cards', () => {
+  it('should count 쌍피 (december-pi-1) as 2 cards', () => {
     const cards = [
-      createCard('december-pi-double', CardType.Pi, Month.December),
+      createCard('december-pi-1', CardType.Pi, Month.December),
       ...Array.from({ length: 8 }, (_, i) =>
         createCard(`pi-${i}`, CardType.Pi, Month.January)
       ),
@@ -64,8 +64,8 @@ describe('Pi Scoring (피)', () => {
 
   it('should count both 쌍피 cards as 2 each', () => {
     const cards = [
-      createCard('november-pi-double', CardType.Pi, Month.November),
-      createCard('december-pi-double', CardType.Pi, Month.December),
+      createCard('november-pi-1', CardType.Pi, Month.November),
+      createCard('december-pi-1', CardType.Pi, Month.December),
       ...Array.from({ length: 7 }, (_, i) =>
         createCard(`pi-${i}`, CardType.Pi, Month.January)
       ),

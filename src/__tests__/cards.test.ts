@@ -34,8 +34,8 @@ describe('Hwatu Cards', () => {
 
       expect(typeCount[CardType.Gwang]).toBe(5); // 광 5장
       expect(typeCount[CardType.Yeol]).toBe(9);  // 열끗 9장
-      expect(typeCount[CardType.Tti]).toBe(10);  // 띠 10장
-      expect(typeCount[CardType.Pi]).toBe(24);   // 피 24장
+      expect(typeCount[CardType.Tti]).toBe(9);   // 띠 9장
+      expect(typeCount[CardType.Pi]).toBe(25);   // 피 25장
     });
 
     it('should have unique card IDs', () => {
@@ -99,26 +99,26 @@ describe('Hwatu Cards', () => {
 
       const yeolMonths = yeolCards.map(card => card.month).sort((a, b) => a - b);
       expect(yeolMonths).toEqual([
-        Month.January,
         Month.February,
-        Month.March,
         Month.April,
         Month.May,
         Month.June,
         Month.July,
+        Month.August,
         Month.September,
         Month.October,
+        Month.December,
       ]);
     });
 
-    it('should have 10 Tti cards distributed correctly', () => {
+    it('should have 9 Tti cards distributed correctly', () => {
       const ttiCards = CARDS.filter(card => card.type === CardType.Tti);
-      expect(ttiCards).toHaveLength(10);
+      expect(ttiCards).toHaveLength(9);
     });
 
-    it('should have 24 Pi cards', () => {
+    it('should have 25 Pi cards', () => {
       const piCards = CARDS.filter(card => card.type === CardType.Pi);
-      expect(piCards).toHaveLength(24);
+      expect(piCards).toHaveLength(25);
     });
   });
 

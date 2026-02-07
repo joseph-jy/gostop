@@ -44,7 +44,8 @@ import CardComponent from './components/Card';
 import CardGroup from './components/CardGroup';
 import ScoreBoard from './components/ScoreBoard';
 import Controls, { type Difficulty } from './components/Controls';
-import Stats, { type StatsComponentProps } from './components/Stats';
+import Stats from './components/Stats';
+import { type GameStats, loadStats, saveStats } from '../store/stats';
 import { playSound, preloadSounds, stopAllSounds } from './sound';
 
 const AI_TURN_DELAY = 800;
@@ -64,32 +65,10 @@ function getPiCards(capture: Card[]): Card[] {
   return capture.filter((c) => c.type === CardType.Pi);
 }
 
-const STATS_KEY = 'gostop-stats';
-
-function loadStats(): StatsComponentProps {
-  try {
-    const raw = localStorage.getItem(STATS_KEY);
-    if (raw) {
-      return JSON.parse(raw) as StatsComponentProps;
-    }
-  } catch {
-    /* ignore parse errors */
-  }
-  return { totalGames: 0, wins: 0, losses: 0, highScore: 0 };
-}
-
-function saveStats(stats: StatsComponentProps): void {
-  try {
-    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
-  } catch {
-    /* ignore storage errors */
-  }
-}
-
 class Game {
   private state: GameState;
   private difficulty: Difficulty = 'medium';
-  private stats: StatsComponentProps;
+  private stats: GameStats;
   private knownCards: Card[] = [];
   private pendingTimeout: ReturnType<typeof setTimeout> | null = null;
 

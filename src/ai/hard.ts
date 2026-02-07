@@ -10,7 +10,7 @@ const CARD_TYPE_VALUES: Record<CardType, number> = {
   [CardType.Pi]: 1,
 };
 
-const DOUBLE_PI_IDS = ['november-pi-double', 'december-pi-double'];
+const DOUBLE_PI_IDS = ['november-pi-1', 'december-pi-1'];
 
 function getCardValue(card: Card): number {
   const baseValue = CARD_TYPE_VALUES[card.type];

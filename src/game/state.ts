@@ -1,5 +1,6 @@
-import { Card, CardType } from './cards';
+import { Card } from './cards';
 import { DealResult } from './deck';
+import { calculateGwangScore, calculateYeolScore, calculateTtiScore, calculatePiScore } from './scoring';
 
 export type Phase =
   | 'waiting'
@@ -93,34 +94,7 @@ export function flipDeckCard(state: GameState): GameState {
 }
 
 export function calculateScore(capture: Card[]): number {
-  let score = 0;
-
-  const gwangCount = capture.filter((c) => c.type === CardType.Gwang).length;
-  const yeolCount = capture.filter((c) => c.type === CardType.Yeol).length;
-  const ttiCount = capture.filter((c) => c.type === CardType.Tti).length;
-  const piCount = capture.filter((c) => c.type === CardType.Pi).length;
-
-  if (gwangCount === 5) {
-    score += 15;
-  } else if (gwangCount === 4) {
-    score += 10;
-  } else if (gwangCount === 3) {
-    score += 7;
-  }
-
-  if (yeolCount >= 5) {
-    score += yeolCount - 4;
-  }
-
-  if (ttiCount >= 5) {
-    score += ttiCount - 4;
-  }
-
-  if (piCount >= 10) {
-    score += piCount - 9;
-  }
-
-  return score;
+  return calculateGwangScore(capture) + calculateYeolScore(capture) + calculateTtiScore(capture) + calculatePiScore(capture);
 }
 
 export function shouldEnterGoStopPhase(state: GameState): boolean {

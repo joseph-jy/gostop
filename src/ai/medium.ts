@@ -2,10 +2,10 @@ import { Card, CardType } from '../game/cards';
 import { GameState } from '../game/state';
 import { getValidMoves, findMatchingCards } from '../game/matching';
 
-const GODORI_CARDS = ['february-yeol', 'april-yeol', 'august-yeol'];
-const HONGDAN_CARDS = ['january-tti', 'february-tti', 'march-tti'];
-const CHEONGDAN_CARDS = ['june-tti', 'september-tti', 'october-tti'];
-const CHODAN_CARDS = ['april-tti', 'may-tti', 'july-tti'];
+const GODORI_CARDS = ['february-bird', 'april-bird', 'august-animal'];
+const HONGDAN_CARDS = ['january-hongdan', 'february-hongdan', 'march-hongdan'];
+const CHEONGDAN_CARDS = ['june-cheongdan', 'september-chodan', 'october-chodan'];
+const CHODAN_CARDS = ['april-hongdan', 'may-hongdan', 'july-chodan'];
 
 function canCompleteCombo(card: Card, aiCapture: Card[], field: Card[]): boolean {
   const matchingCards = findMatchingCards(card, field);

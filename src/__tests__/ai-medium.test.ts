@@ -41,27 +41,27 @@ describe('Medium AI', () => {
 
     it('should prioritize combo completion (godori)', () => {
       const hand: Card[] = [
-        { id: 'august-yeol', month: Month.August, type: CardType.Yeol, imagePath: '' },
+        { id: 'august-animal', month: Month.August, type: CardType.Yeol, imagePath: '' },
         { id: 'may-pi-1', month: Month.May, type: CardType.Pi, imagePath: '' },
       ];
-      
+
       const field: Card[] = [
         { id: 'august-pi-1', month: Month.August, type: CardType.Pi, imagePath: '' },
-        { id: 'may-tti', month: Month.May, type: CardType.Tti, imagePath: '' },
+        { id: 'may-hongdan', month: Month.May, type: CardType.Tti, imagePath: '' },
       ];
-      
+
       const state: GameState = {
         playerHand: [],
         aiHand: hand,
         field,
         deck: [],
         playerCapture: [
-          { id: 'february-yeol', month: Month.February, type: CardType.Yeol, imagePath: '' },
-          { id: 'april-yeol', month: Month.April, type: CardType.Yeol, imagePath: '' },
+          { id: 'february-bird', month: Month.February, type: CardType.Yeol, imagePath: '' },
+          { id: 'april-bird', month: Month.April, type: CardType.Yeol, imagePath: '' },
         ],
         aiCapture: [
-          { id: 'february-yeol', month: Month.February, type: CardType.Yeol, imagePath: '' },
-          { id: 'april-yeol', month: Month.April, type: CardType.Yeol, imagePath: '' },
+          { id: 'february-bird', month: Month.February, type: CardType.Yeol, imagePath: '' },
+          { id: 'april-bird', month: Month.April, type: CardType.Yeol, imagePath: '' },
         ],
         currentTurn: 'ai',
         phase: 'select-hand',
@@ -71,24 +71,24 @@ describe('Medium AI', () => {
         lastAction: null,
         shakingMultiplier: 1,
       };
-      
+
       const selected = selectMove(state, hand, field);
-      
-      // Should select august-yeol to complete godori
-      expect(selected.id).toBe('august-yeol');
+
+      // Should select august-animal to complete godori
+      expect(selected.id).toBe('august-animal');
     });
 
     it('should prioritize combo completion (hongdan)', () => {
       const hand: Card[] = [
-        { id: 'march-tti', month: Month.March, type: CardType.Tti, imagePath: '' },
+        { id: 'march-hongdan', month: Month.March, type: CardType.Tti, imagePath: '' },
         { id: 'june-pi-1', month: Month.June, type: CardType.Pi, imagePath: '' },
       ];
-      
+
       const field: Card[] = [
         { id: 'march-pi-1', month: Month.March, type: CardType.Pi, imagePath: '' },
-        { id: 'june-tti', month: Month.June, type: CardType.Tti, imagePath: '' },
+        { id: 'june-cheongdan', month: Month.June, type: CardType.Tti, imagePath: '' },
       ];
-      
+
       const state: GameState = {
         playerHand: [],
         aiHand: hand,
@@ -96,8 +96,8 @@ describe('Medium AI', () => {
         deck: [],
         playerCapture: [],
         aiCapture: [
-          { id: 'january-tti', month: Month.January, type: CardType.Tti, imagePath: '' },
-          { id: 'february-tti', month: Month.February, type: CardType.Tti, imagePath: '' },
+          { id: 'january-hongdan', month: Month.January, type: CardType.Tti, imagePath: '' },
+          { id: 'february-hongdan', month: Month.February, type: CardType.Tti, imagePath: '' },
         ],
         currentTurn: 'ai',
         phase: 'select-hand',
@@ -107,11 +107,11 @@ describe('Medium AI', () => {
         lastAction: null,
         shakingMultiplier: 1,
       };
-      
+
       const selected = selectMove(state, hand, field);
-      
-      // Should select march-tti to complete hongdan
-      expect(selected.id).toBe('march-tti');
+
+      // Should select march-hongdan to complete hongdan
+      expect(selected.id).toBe('march-hongdan');
     });
 
     it('should fall back to random selection when no priority moves', () => {

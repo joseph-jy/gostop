@@ -325,20 +325,23 @@ describe('Go-Stop Phase Logic', () => {
     const deck = createDeck();
     const dealResult = dealCards(deck);
     const state = createInitialState(dealResult);
-    
+
+    // 5광 = 15점 (scoring.ts 기준)
     const gwangCards: Card[] = [
       { id: 'january-gwang', month: Month.January, type: CardType.Gwang, imagePath: 'test.png' },
       { id: 'march-gwang', month: Month.March, type: CardType.Gwang, imagePath: 'test.png' },
       { id: 'august-gwang', month: Month.August, type: CardType.Gwang, imagePath: 'test.png' },
+      { id: 'november-gwang', month: Month.November, type: CardType.Gwang, imagePath: 'test.png' },
+      { id: 'december-gwang', month: Month.December, type: CardType.Gwang, imagePath: 'test.png' },
     ];
-    
-    const stateWithCapture = updateState(state, { 
+
+    const stateWithCapture = updateState(state, {
       playerCapture: gwangCards,
       currentTurn: 'player'
     });
-    
+
     const shouldEnter = shouldEnterGoStopPhase(stateWithCapture);
-    
+
     expect(shouldEnter).toBe(true);
   });
   
@@ -365,21 +368,24 @@ describe('Go-Stop Phase Logic', () => {
     const deck = createDeck();
     const dealResult = dealCards(deck);
     const state = createInitialState(dealResult);
-    
+
+    // 5광 = 15점 (scoring.ts 기준)
     const gwangCards: Card[] = [
       { id: 'january-gwang', month: Month.January, type: CardType.Gwang, imagePath: 'test.png' },
       { id: 'march-gwang', month: Month.March, type: CardType.Gwang, imagePath: 'test.png' },
       { id: 'august-gwang', month: Month.August, type: CardType.Gwang, imagePath: 'test.png' },
+      { id: 'november-gwang', month: Month.November, type: CardType.Gwang, imagePath: 'test.png' },
+      { id: 'december-gwang', month: Month.December, type: CardType.Gwang, imagePath: 'test.png' },
     ];
-    
-    const checkScoreState = updateState(state, { 
+
+    const checkScoreState = updateState(state, {
       phase: 'check-score',
       playerCapture: gwangCards,
       currentTurn: 'player'
     });
-    
+
     const newState = advancePhase(checkScoreState);
-    
+
     expect(newState.phase).toBe('go-stop');
   });
   
@@ -513,22 +519,25 @@ describe('Full Turn Sequence', () => {
     const deck = createDeck();
     const dealResult = dealCards(deck);
     let state = createInitialState(dealResult);
-    
+
+    // 5광 = 15점 (scoring.ts 기준)
     const gwangCards: Card[] = [
       { id: 'january-gwang', month: Month.January, type: CardType.Gwang, imagePath: 'test.png' },
       { id: 'march-gwang', month: Month.March, type: CardType.Gwang, imagePath: 'test.png' },
       { id: 'august-gwang', month: Month.August, type: CardType.Gwang, imagePath: 'test.png' },
+      { id: 'november-gwang', month: Month.November, type: CardType.Gwang, imagePath: 'test.png' },
+      { id: 'december-gwang', month: Month.December, type: CardType.Gwang, imagePath: 'test.png' },
     ];
-    
-    state = updateState(state, { 
+
+    state = updateState(state, {
       playerCapture: gwangCards,
       phase: 'check-score',
       currentTurn: 'player'
     });
-    
+
     state = advancePhase(state);
     expect(state.phase).toBe('go-stop');
-    
+
     state = updateState(state, { phase: 'end' });
     expect(state.phase).toBe('end');
   });

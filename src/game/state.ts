@@ -139,6 +139,12 @@ export function shouldEnterGoStopPhase(state: GameState): boolean {
   return score >= state.ruleSet.goStopThreshold;
 }
 
+export function isStarterHandExhausted(state: GameState, starterTurn: Turn): boolean {
+  return starterTurn === 'player'
+    ? state.playerHand.length === 0
+    : state.aiHand.length === 0;
+}
+
 export function advancePhase(state: GameState): GameState {
   const phaseTransitions: Record<Phase, Phase> = {
     'waiting': 'select-hand',

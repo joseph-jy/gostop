@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   detectJjok,
   detectPpuk,
+  detectFieldQuadStack,
   detectBomb,
   detectChongtong,
   canShake,
@@ -92,6 +93,30 @@ describe('Special Rules - Detection', () => {
       ];
 
       expect(detectPpuk(card, field)).toBe(false);
+    });
+  });
+
+  describe('detectFieldQuadStack', () => {
+    it('should detect a quad stack when field has 4 cards of same month', () => {
+      const field = [
+        createCard(Month.January, CardType.Gwang, 'january-gwang'),
+        createCard(Month.January, CardType.Tti, 'january-tti'),
+        createCard(Month.January, CardType.Pi, 'january-pi-1'),
+        createCard(Month.January, CardType.Pi, 'january-pi-2'),
+      ];
+
+      expect(detectFieldQuadStack(field)).toBe(true);
+    });
+
+    it('should return false when max same-month count is 3', () => {
+      const field = [
+        createCard(Month.January, CardType.Gwang, 'january-gwang'),
+        createCard(Month.January, CardType.Tti, 'january-tti'),
+        createCard(Month.January, CardType.Pi, 'january-pi-1'),
+        createCard(Month.February, CardType.Pi, 'february-pi-1'),
+      ];
+
+      expect(detectFieldQuadStack(field)).toBe(false);
     });
   });
 

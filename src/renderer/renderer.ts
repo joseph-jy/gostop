@@ -4,21 +4,22 @@ import { Card, CardType, Month } from '../game/cards';
 import { createDeck, dealCards } from '../game/deck';
 import {
   GameState,
+  Turn,
   createInitialState,
   updateState,
   switchTurn,
   selectCard,
   flipDeckCard,
   calculateScore,
+  isStarterHandExhausted,
 } from '../game/state';
 import { applyMatch } from '../game/matching';
 import {
-  detectJjok,
   detectPpuk,
+  detectFieldQuadStack,
   detectBomb,
   detectChongtong,
   canShake,
-  applyJjok,
   applyPpuk,
   applyBomb,
   applyChongtong,
@@ -50,6 +51,14 @@ import { playSound, preloadSounds, stopAllSounds } from './sound';
 const AI_TURN_DELAY = 800;
 const PHASE_TRANSITION_DELAY = 400;
 const DEAL_CARD_DELAY = 60;
+const INITIAL_QUAD_WIN_SCORE = 10;
+
+interface ForcedResult {
+  winner: 'player' | 'ai';
+  playerFinal: number;
+  aiFinal: number;
+  reason: string;
+}
 
 function categorizeCaptured(capture: Card[]): CapturedCards {
   return {
@@ -76,6 +85,9 @@ class Game {
   private stats: GameStats;
   private knownCards: Card[] = [];
   private pendingTimeout: ReturnType<typeof setTimeout> | null = null;
+  private forcedResult: ForcedResult | null = null;
+  private starterTurn: Turn = 'player';
+  private readonly boundHandleChoiceKeyDown: (e: KeyboardEvent) => void;
 
   private readonly appEl: HTMLElement;
   private readonly boardEl: HTMLElement;
@@ -105,6 +117,7 @@ class Game {
     const deal = dealCards(deck);
     this.state = createInitialState(deal);
     this.state = updateState(this.state, { phase: 'waiting' });
+    this.starterTurn = this.state.currentTurn;
 
     this.appEl.innerHTML = '';
 
@@ -176,6 +189,9 @@ class Game {
     this.statsComponent = new Stats(this.stats);
     bottomRow.appendChild(this.statsComponent.getElement());
 
+    this.boundHandleChoiceKeyDown = this.handleChoiceKeyDown.bind(this);
+    window.addEventListener('keydown', this.boundHandleChoiceKeyDown);
+
     preloadSounds().catch(() => { /* audio not critical */ });
   }
 
@@ -187,8 +203,13 @@ class Game {
     const deal = dealCards(deck);
     this.state = createInitialState(deal);
     this.knownCards = [];
+    this.forcedResult = null;
+    this.starterTurn = this.state.currentTurn;
 
     this.handleDealSpecialRules();
+    if (this.handleInitialQuadStackWin()) {
+      return;
+    }
 
     this.state = updateState(this.state, { phase: 'select-hand' });
 
@@ -256,6 +277,22 @@ class Game {
     this.updateDokbakOwner();
   }
 
+  private handleInitialQuadStackWin(): boolean {
+    if (!detectFieldQuadStack(this.state.field)) {
+      return false;
+    }
+
+    // Current implementation always starts with player as 선.
+    this.forcedResult = {
+      winner: 'player',
+      playerFinal: INITIAL_QUAD_WIN_SCORE,
+      aiFinal: 0,
+      reason: `바닥 4장 겹침: 선 승리 (${INITIAL_QUAD_WIN_SCORE}점)`,
+    };
+    this.endGame();
+    return true;
+  }
+
   private animateDeal(): void {
     const allCards = [
       ...this.playerCardComponents,
@@ -299,32 +336,9 @@ class Game {
   private applyCardToField(
     card: Card,
     captureKey: 'playerCapture' | 'aiCapture',
-    opponentCaptureKey: 'playerCapture' | 'aiCapture',
+    _opponentCaptureKey: 'playerCapture' | 'aiCapture',
     extraUpdates: Partial<GameState> = {},
   ): boolean {
-    if (detectJjok(card, this.state.field)) {
-      const opponentPi = getPiCards(this.state[opponentCaptureKey]);
-      const result = applyJjok(card, this.state.field, opponentPi);
-      const stolenFromOpponent = this.state[opponentCaptureKey].filter(
-        (c) => !result.stolenPi.some((s) => s.id === c.id),
-      );
-      const victim = opponentCaptureKey === 'playerCapture' ? 'player' : 'ai';
-      this.state = updateState(this.state, {
-        field: result.remainingField,
-        [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
-        [opponentCaptureKey]: stolenFromOpponent,
-        piStealCount: {
-          ...this.state.piStealCount,
-          [victim]: this.state.piStealCount[victim] + result.stolenPi.length,
-        },
-        eventLog: appendLog(this.state.eventLog, `${this.state.currentTurn} 쪽`),
-        ...extraUpdates,
-      });
-      this.updateDokbakOwner();
-      playSound('card-match');
-      return true;
-    }
-
     if (detectPpuk(card, this.state.field)) {
       const result = applyPpuk(card, this.state.field);
       this.state = updateState(this.state, {
@@ -379,7 +393,6 @@ class Game {
 
   private matchHandCard(card: Card, turn: 'player' | 'ai'): void {
     const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
-    const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
 
     // Ppuk (3장 매칭): 즉시 캡처, 쌌다 불가
     if (detectPpuk(card, this.state.field)) {
@@ -390,28 +403,6 @@ class Game {
         eventLog: appendLog(this.state.eventLog, `${turn} 뻑`),
       });
       this.updateDokbakOwner();
-      playSound('card-match');
-      this.proceedToFlipDeck();
-      return;
-    }
-
-    if (detectJjok(card, this.state.field)) {
-      const opponentPi = getPiCards(this.state[opponentCaptureKey]);
-      const result = applyJjok(card, this.state.field, opponentPi);
-      const stolenFromOpponent = this.state[opponentCaptureKey].filter(
-        (c) => !result.stolenPi.some((s) => s.id === c.id),
-      );
-      const victim = opponentCaptureKey === 'playerCapture' ? 'player' : 'ai';
-      this.state = updateState(this.state, {
-        field: result.remainingField,
-        [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
-        [opponentCaptureKey]: stolenFromOpponent,
-        piStealCount: {
-          ...this.state.piStealCount,
-          [victim]: this.state.piStealCount[victim] + result.stolenPi.length,
-        },
-        eventLog: appendLog(this.state.eventLog, `${turn} 쪽`),
-      });
       playSound('card-match');
       this.proceedToFlipDeck();
       return;
@@ -523,6 +514,27 @@ class Game {
     }
   }
 
+  private handleChoiceKeyDown(e: KeyboardEvent): void {
+    const isChoicePhase =
+      this.state.phase === 'choose-match-hand' || this.state.phase === 'choose-match-deck';
+    if (!isChoicePhase || this.state.currentTurn !== 'player' || !this.state.choiceContext) {
+      return;
+    }
+
+    if (e.key !== '1' && e.key !== '2') {
+      return;
+    }
+
+    const index = Number(e.key) - 1;
+    const chosenCard = this.state.choiceContext.matchingCards[index];
+    if (!chosenCard) {
+      return;
+    }
+
+    e.preventDefault();
+    this.handleFieldCardChoice(chosenCard);
+  }
+
   private flipAndMatchDeckCard(): void {
     if (this.state.deck.length === 0) {
       this.resolvePendingHandMatch();
@@ -591,6 +603,11 @@ class Game {
     }
 
     if (this.state.playerHand.length === 0 && this.state.aiHand.length === 0) {
+      this.endGame();
+      return;
+    }
+
+    if (isStarterHandExhausted(this.state, this.starterTurn)) {
       this.endGame();
       return;
     }
@@ -711,6 +728,27 @@ class Game {
   private endGame(): void {
     const endedByStop = this.state.phase === 'end';
     this.state = updateState(this.state, { phase: 'end' });
+
+    if (this.forcedResult) {
+      const playerWon = this.forcedResult.winner === 'player';
+      this.stats = {
+        totalGames: this.stats.totalGames + 1,
+        wins: this.stats.wins + (playerWon ? 1 : 0),
+        losses: this.stats.losses + (playerWon ? 0 : 1),
+        highScore: Math.max(this.stats.highScore, this.forcedResult.playerFinal),
+      };
+      saveStats(this.stats);
+      this.statsComponent.update(this.stats);
+
+      playSound(playerWon ? 'win' : 'lose');
+      this.renderAll();
+
+      this.showMessage(
+        playerWon ? '승리!' : '패배',
+        `내 점수: ${this.forcedResult.playerFinal}점 | AI 점수: ${this.forcedResult.aiFinal}점\n${this.forcedResult.reason}`,
+      );
+      return;
+    }
 
     const playerCategorized = categorizeCaptured(this.state.playerCapture);
     const aiCategorized = categorizeCaptured(this.state.aiCapture);
@@ -1000,6 +1038,7 @@ class Game {
   destroy(): void {
     this.clearPendingTimeout();
     stopAllSounds();
+    window.removeEventListener('keydown', this.boundHandleChoiceKeyDown);
 
     this.destroyComponents(this.playerCardComponents);
     this.destroyComponents(this.aiCardComponents);

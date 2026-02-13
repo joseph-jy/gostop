@@ -10,6 +10,19 @@ export function detectPpuk(card: Card, field: Card[]): boolean {
   return sameMonthCards.length === 3;
 }
 
+export function detectFieldQuadStack(field: Card[]): boolean {
+  const monthCounts = new Map<Month, number>();
+
+  for (const card of field) {
+    monthCounts.set(card.month, (monthCounts.get(card.month) || 0) + 1);
+    if ((monthCounts.get(card.month) || 0) >= 4) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function findMonthsByCount(hand: Card[], targetCount: number): Month[] {
   const monthCounts = new Map<Month, number>();
 

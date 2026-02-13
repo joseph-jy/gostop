@@ -7,7 +7,8 @@ import {
   switchTurn,
   selectCard,
   flipDeckCard,
-  shouldEnterGoStopPhase
+  shouldEnterGoStopPhase,
+  isStarterHandExhausted
 } from '../game/state';
 import { createDeck, dealCards } from '../game/deck';
 import { Card, CardType, Month } from '../game/cards';
@@ -449,6 +450,36 @@ describe('Go-Stop Phase Logic', () => {
     
     expect(newState.phase).toBe('select-hand');
     expect(newState.currentTurn).not.toBe(checkScoreState.currentTurn);
+  });
+});
+
+describe('Starter Hand Exhaustion', () => {
+  it('should return true when starter is player and player hand is empty', () => {
+    const deck = createDeck();
+    const dealResult = dealCards(deck);
+    const state = createInitialState(dealResult);
+
+    const updated = updateState(state, { playerHand: [] });
+
+    expect(isStarterHandExhausted(updated, 'player')).toBe(true);
+  });
+
+  it('should return false when starter is player and player hand is not empty', () => {
+    const deck = createDeck();
+    const dealResult = dealCards(deck);
+    const state = createInitialState(dealResult);
+
+    expect(isStarterHandExhausted(state, 'player')).toBe(false);
+  });
+
+  it('should return true when starter is ai and ai hand is empty', () => {
+    const deck = createDeck();
+    const dealResult = dealCards(deck);
+    const state = createInitialState(dealResult);
+
+    const updated = updateState(state, { aiHand: [] });
+
+    expect(isStarterHandExhausted(updated, 'ai')).toBe(true);
   });
 });
 

@@ -1,7 +1,7 @@
 import { Card } from './cards';
 import { DealResult } from './deck';
 import { calculateGwangScore, calculateYeolScore, calculateTtiScore, calculatePiScore } from './scoring';
-import { GO_STOP_THRESHOLD } from './constants';
+import { RuleSet, STANDARD_RULESET } from './ruleset';
 
 export type Phase =
   | 'waiting'
@@ -49,6 +49,12 @@ export interface GameState {
   shakingMultiplier: number;
   pendingHandMatch: PendingHandMatch | null;
   choiceContext: ChoiceContext | null;
+  ruleSet: RuleSet;
+  eventLog: string[];
+  goHistory: Turn[];
+  bakFlags: { player: boolean; ai: boolean };
+  dokbakOwner: Turn | null;
+  piStealCount: { player: number; ai: number };
 }
 
 export function createInitialState(dealResult: DealResult): GameState {
@@ -68,6 +74,12 @@ export function createInitialState(dealResult: DealResult): GameState {
     shakingMultiplier: 1,
     pendingHandMatch: null,
     choiceContext: null,
+    ruleSet: STANDARD_RULESET,
+    eventLog: [],
+    goHistory: [],
+    bakFlags: { player: false, ai: false },
+    dokbakOwner: null,
+    piStealCount: { player: 0, ai: 0 },
   };
 }
 
@@ -124,7 +136,7 @@ export function shouldEnterGoStopPhase(state: GameState): boolean {
   
   const score = calculateScore(currentCapture);
   
-  return score >= GO_STOP_THRESHOLD;
+  return score >= state.ruleSet.goStopThreshold;
 }
 
 export function advancePhase(state: GameState): GameState {

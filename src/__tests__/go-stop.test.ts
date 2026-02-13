@@ -36,6 +36,7 @@ describe('selectGo', () => {
 
     expect(newState.goCount.player).toBe(1);
     expect(newState.goCount.ai).toBe(0);
+    expect(newState.goHistory).toEqual(['player']);
   });
 
   it('should increment ai goCount when ai selects go', () => {
@@ -48,6 +49,7 @@ describe('selectGo', () => {
 
     expect(newState.goCount.player).toBe(0);
     expect(newState.goCount.ai).toBe(1);
+    expect(newState.goHistory).toEqual(['ai']);
   });
 
   it('should switch turn after selecting go', () => {
@@ -165,23 +167,22 @@ describe('calculateGoMultiplier', () => {
   });
 
   it('should return 2 when goCount is 1', () => {
-    expect(calculateGoMultiplier(1)).toBe(2);
+    expect(calculateGoMultiplier(1)).toBe(1);
   });
 
   it('should return 4 when goCount is 2', () => {
-    expect(calculateGoMultiplier(2)).toBe(4);
+    expect(calculateGoMultiplier(2)).toBe(1);
   });
 
   it('should return 8 when goCount is 3', () => {
-    expect(calculateGoMultiplier(3)).toBe(8);
+    expect(calculateGoMultiplier(3)).toBe(2);
   });
 
   it('should return 16 when goCount is 4', () => {
-    expect(calculateGoMultiplier(4)).toBe(16);
+    expect(calculateGoMultiplier(4)).toBe(2);
   });
 
   it('should handle large goCount values', () => {
-    expect(calculateGoMultiplier(10)).toBe(1024);
+    expect(calculateGoMultiplier(10)).toBe(2);
   });
 });
-

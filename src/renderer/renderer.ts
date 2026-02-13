@@ -13,25 +13,27 @@ import {
 } from '../game/state';
 import { applyMatch } from '../game/matching';
 import {
+  detectJjok,
   detectPpuk,
   detectBomb,
   detectChongtong,
   canShake,
+  applyJjok,
   applyPpuk,
   applyBomb,
   applyChongtong,
   applyShake,
   detectSsatda,
   applySsatda,
+  detectJjoknassda,
 } from '../game/special-rules';
-import { selectGo, selectStop, calculateGoMultiplier } from '../game/go-stop';
+import { selectGo, selectStop } from '../game/go-stop';
 import { getCombos, getComboScore } from '../game/combos';
 import {
   CapturedCards,
-  calculateTotal,
-  applyBonus,
+  calculateSettlement,
 } from '../game/scoring';
-import { GO_STOP_THRESHOLD, CARD_TYPE_VALUES } from '../game/constants';
+import { CARD_TYPE_VALUES } from '../game/constants';
 
 import { createAiPlayer } from '../ai/index';
 import { type AiPlayer } from '../ai/types';
@@ -60,6 +62,11 @@ function categorizeCaptured(capture: Card[]): CapturedCards {
 
 function getPiCards(capture: Card[]): Card[] {
   return capture.filter((c) => c.type === CardType.Pi);
+}
+
+function appendLog(current: string[], message: string): string[] {
+  const next = [...current, message];
+  return next.length <= 20 ? next : next.slice(next.length - 20);
 }
 
 class Game {
@@ -192,41 +199,61 @@ class Game {
   }
 
   private handleDealSpecialRules(): void {
-    const playerChongtong = detectChongtong(this.state.playerHand);
-    for (const month of playerChongtong) {
-      const result = applyChongtong(
-        month,
-        this.state.playerHand,
-        getPiCards(this.state.aiCapture),
-      );
-      const stolenFromAi = this.state.aiCapture.filter(
-        (c) => !result.stolenPi.some((s) => s.id === c.id),
-      );
-      this.state = updateState(this.state, {
-        playerHand: result.remainingHand,
-        playerCapture: [...this.state.playerCapture, ...result.captured, ...result.stolenPi],
-        aiCapture: stolenFromAi,
-      });
-    }
+    const applyAutoRulesFor = (turn: 'player' | 'ai'): void => {
+      const handKey = turn === 'player' ? 'playerHand' : 'aiHand';
+      const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
+      const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
+      const victim = turn === 'player' ? 'ai' : 'player';
 
-    const playerBombs = detectBomb(this.state.playerHand);
-    for (const month of playerBombs) {
-      const result = applyBomb(
-        month,
-        this.state.playerHand,
-        this.state.field,
-        getPiCards(this.state.aiCapture),
-      );
-      const stolenFromAi = this.state.aiCapture.filter(
-        (c) => !result.stolenPi.some((s) => s.id === c.id),
-      );
-      this.state = updateState(this.state, {
-        playerHand: result.remainingHand,
-        field: result.remainingField,
-        playerCapture: [...this.state.playerCapture, ...result.captured, ...result.stolenPi],
-        aiCapture: stolenFromAi,
-      });
-    }
+      const chongtongMonths = detectChongtong(this.state[handKey]);
+      for (const month of chongtongMonths) {
+        const result = applyChongtong(month, this.state[handKey], getPiCards(this.state[opponentCaptureKey]));
+        const stolenFromOpponent = this.state[opponentCaptureKey].filter(
+          (c) => !result.stolenPi.some((s) => s.id === c.id),
+        );
+
+        this.state = updateState(this.state, {
+          [handKey]: result.remainingHand,
+          [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
+          [opponentCaptureKey]: stolenFromOpponent,
+          piStealCount: {
+            ...this.state.piStealCount,
+            [victim]: this.state.piStealCount[victim] + result.stolenPi.length,
+          },
+          eventLog: appendLog(this.state.eventLog, `${turn} 총통`),
+        });
+      }
+
+      const bombMonths = detectBomb(this.state[handKey]);
+      for (const month of bombMonths) {
+        const result = applyBomb(
+          month,
+          this.state[handKey],
+          this.state.field,
+          getPiCards(this.state[opponentCaptureKey]),
+        );
+        const stolenFromOpponent = this.state[opponentCaptureKey].filter(
+          (c) => !result.stolenPi.some((s) => s.id === c.id),
+        );
+
+        this.state = updateState(this.state, {
+          [handKey]: result.remainingHand,
+          field: result.remainingField,
+          [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
+          [opponentCaptureKey]: stolenFromOpponent,
+          piStealCount: {
+            ...this.state.piStealCount,
+            [victim]: this.state.piStealCount[victim] + result.stolenPi.length,
+          },
+          eventLog: appendLog(this.state.eventLog, `${turn} 폭탄`),
+        });
+      }
+    };
+
+    applyAutoRulesFor('player');
+    applyAutoRulesFor('ai');
+
+    this.updateDokbakOwner();
   }
 
   private animateDeal(): void {
@@ -272,14 +299,38 @@ class Game {
   private applyCardToField(
     card: Card,
     captureKey: 'playerCapture' | 'aiCapture',
-    _opponentCaptureKey: 'playerCapture' | 'aiCapture',
+    opponentCaptureKey: 'playerCapture' | 'aiCapture',
     extraUpdates: Partial<GameState> = {},
   ): boolean {
+    if (detectJjok(card, this.state.field)) {
+      const opponentPi = getPiCards(this.state[opponentCaptureKey]);
+      const result = applyJjok(card, this.state.field, opponentPi);
+      const stolenFromOpponent = this.state[opponentCaptureKey].filter(
+        (c) => !result.stolenPi.some((s) => s.id === c.id),
+      );
+      const victim = opponentCaptureKey === 'playerCapture' ? 'player' : 'ai';
+      this.state = updateState(this.state, {
+        field: result.remainingField,
+        [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
+        [opponentCaptureKey]: stolenFromOpponent,
+        piStealCount: {
+          ...this.state.piStealCount,
+          [victim]: this.state.piStealCount[victim] + result.stolenPi.length,
+        },
+        eventLog: appendLog(this.state.eventLog, `${this.state.currentTurn} 쪽`),
+        ...extraUpdates,
+      });
+      this.updateDokbakOwner();
+      playSound('card-match');
+      return true;
+    }
+
     if (detectPpuk(card, this.state.field)) {
       const result = applyPpuk(card, this.state.field);
       this.state = updateState(this.state, {
         field: result.remainingField,
         [captureKey]: [...this.state[captureKey], ...result.captured],
+        eventLog: appendLog(this.state.eventLog, `${this.state.currentTurn} 뻑`),
         ...extraUpdates,
       });
       playSound('card-match');
@@ -328,6 +379,7 @@ class Game {
 
   private matchHandCard(card: Card, turn: 'player' | 'ai'): void {
     const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
+    const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
 
     // Ppuk (3장 매칭): 즉시 캡처, 쌌다 불가
     if (detectPpuk(card, this.state.field)) {
@@ -335,6 +387,30 @@ class Game {
       this.state = updateState(this.state, {
         field: result.remainingField,
         [captureKey]: [...this.state[captureKey], ...result.captured],
+        eventLog: appendLog(this.state.eventLog, `${turn} 뻑`),
+      });
+      this.updateDokbakOwner();
+      playSound('card-match');
+      this.proceedToFlipDeck();
+      return;
+    }
+
+    if (detectJjok(card, this.state.field)) {
+      const opponentPi = getPiCards(this.state[opponentCaptureKey]);
+      const result = applyJjok(card, this.state.field, opponentPi);
+      const stolenFromOpponent = this.state[opponentCaptureKey].filter(
+        (c) => !result.stolenPi.some((s) => s.id === c.id),
+      );
+      const victim = opponentCaptureKey === 'playerCapture' ? 'player' : 'ai';
+      this.state = updateState(this.state, {
+        field: result.remainingField,
+        [captureKey]: [...this.state[captureKey], ...result.captured, ...result.stolenPi],
+        [opponentCaptureKey]: stolenFromOpponent,
+        piStealCount: {
+          ...this.state.piStealCount,
+          [victim]: this.state.piStealCount[victim] + result.stolenPi.length,
+        },
+        eventLog: appendLog(this.state.eventLog, `${turn} 쪽`),
       });
       playSound('card-match');
       this.proceedToFlipDeck();
@@ -393,6 +469,17 @@ class Game {
     this.schedulePendingTimeout(() => {
       this.flipAndMatchDeckCard();
     }, PHASE_TRANSITION_DELAY);
+  }
+
+  private updateDokbakOwner(): void {
+    const threshold = this.state.ruleSet.dokbakStealThreshold;
+    const dokbakOwner =
+      this.state.piStealCount.player >= threshold
+        ? 'player'
+        : this.state.piStealCount.ai >= threshold
+          ? 'ai'
+          : null;
+    this.state = updateState(this.state, { dokbakOwner });
   }
 
   private resolvePendingHandMatch(): void {
@@ -457,6 +544,7 @@ class Game {
     const captureKey = turn === 'player' ? 'playerCapture' : 'aiCapture';
     const opponentCaptureKey = turn === 'player' ? 'aiCapture' : 'playerCapture';
     const pending = this.state.pendingHandMatch;
+    const selected = this.state.selectedCard;
 
     // 쌌다 체크: pendingHandMatch 있고 덱 카드가 같은 달
     if (pending && detectSsatda(pending.handCard, flipped)) {
@@ -478,6 +566,12 @@ class Game {
 
     // pendingHandMatch 있지만 덱 카드 다른 달 → 지연 캡처 완료
     this.resolvePendingHandMatch();
+
+    if (!pending && selected && detectJjoknassda(selected, flipped)) {
+      this.state = updateState(this.state, {
+        eventLog: appendLog(this.state.eventLog, `${turn} 쪽났다`),
+      });
+    }
 
     // 덱 카드 매칭 처리 (쪽났다는 applyMatch에서 자연스럽게 처리됨)
     const resolved = this.applyCardToField(flipped, captureKey, opponentCaptureKey, { phase: 'match-deck' });
@@ -502,7 +596,7 @@ class Game {
     }
 
     const score = calculateScore(currentCapture);
-    if (score >= GO_STOP_THRESHOLD) {
+    if (score >= this.state.ruleSet.goStopThreshold) {
       this.state = updateState(this.state, { phase: 'go-stop' });
       this.renderAll();
 
@@ -615,47 +709,55 @@ class Game {
   }
 
   private endGame(): void {
+    const endedByStop = this.state.phase === 'end';
     this.state = updateState(this.state, { phase: 'end' });
 
     const playerCategorized = categorizeCaptured(this.state.playerCapture);
     const aiCategorized = categorizeCaptured(this.state.aiCapture);
-    const playerScoreObj = calculateTotal(playerCategorized);
-    const aiScoreObj = calculateTotal(aiCategorized);
 
     const playerCombos = getCombos(this.state.playerCapture);
     const aiCombos = getCombos(this.state.aiCapture);
     const playerComboScore = getComboScore(playerCombos);
     const aiComboScore = getComboScore(aiCombos);
 
-    const playerGoMult = calculateGoMultiplier(this.state.goCount.player);
-    const aiGoMult = calculateGoMultiplier(this.state.goCount.ai);
+    const declaredWinner = endedByStop ? this.state.currentTurn : undefined;
+    const settlement = calculateSettlement({
+      playerCapture: playerCategorized,
+      aiCapture: aiCategorized,
+      playerGoCount: this.state.goCount.player,
+      aiGoCount: this.state.goCount.ai,
+      playerComboScore,
+      aiComboScore,
+      shakingMultiplier: this.state.shakingMultiplier,
+      ruleSet: this.state.ruleSet,
+      declaredWinner,
+      bakFlags: this.state.bakFlags,
+      dokbakOwner: this.state.dokbakOwner,
+    });
+    const playerFinal = settlement.playerFinal;
+    const aiFinal = settlement.aiFinal;
+    const playerWon = settlement.winner === 'player';
 
-    const shakeMult = this.state.shakingMultiplier;
+    if (!settlement.isNagari) {
+      this.stats = {
+        totalGames: this.stats.totalGames + 1,
+        wins: this.stats.wins + (playerWon ? 1 : 0),
+        losses: this.stats.losses + (playerWon ? 0 : 1),
+        highScore: Math.max(this.stats.highScore, playerFinal),
+      };
+      saveStats(this.stats);
+      this.statsComponent.update(this.stats);
+    }
 
-    const playerBonus = applyBonus(playerScoreObj, aiScoreObj, aiCategorized);
-    const aiBonus = applyBonus(aiScoreObj, playerScoreObj, playerCategorized);
-
-    const playerFinal = playerBonus.finalScore * playerGoMult * shakeMult + playerComboScore;
-    const aiFinal = aiBonus.finalScore * aiGoMult + aiComboScore;
-
-    const playerWon = playerFinal >= aiFinal;
-
-    this.stats = {
-      totalGames: this.stats.totalGames + 1,
-      wins: this.stats.wins + (playerWon ? 1 : 0),
-      losses: this.stats.losses + (playerWon ? 0 : 1),
-      highScore: Math.max(this.stats.highScore, playerFinal),
-    };
-    saveStats(this.stats);
-    this.statsComponent.update(this.stats);
-
-    playSound(playerWon ? 'win' : 'lose');
+    if (!settlement.isNagari) {
+      playSound(playerWon ? 'win' : 'lose');
+    }
     this.renderAll();
 
-    const bonusText = playerBonus.bonuses.length > 0
-      ? `\n보너스: ${playerBonus.bonuses.join(', ')}`
+    const bonusText = settlement.winnerBonuses.length > 0
+      ? `\n보너스: ${settlement.winnerBonuses.join(', ')}`
       : '';
-    const resultTitle = playerWon ? '승리!' : '패배';
+    const resultTitle = settlement.isNagari ? '나가리' : playerWon ? '승리!' : '패배';
     const resultMessage =
       `내 점수: ${playerFinal}점 | AI 점수: ${aiFinal}점${bonusText}`;
 

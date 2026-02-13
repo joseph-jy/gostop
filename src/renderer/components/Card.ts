@@ -6,6 +6,7 @@ export interface CardComponentProps {
   isSelectable?: boolean;
   isSelected?: boolean;
   isHint?: boolean;
+  showDisabledStyle?: boolean;
 }
 
 const CSS = {
@@ -72,7 +73,13 @@ export default class CardComponent {
   }
 
   private applyProps(): void {
-    const { card, isSelectable = true, isSelected = false, isHint = false } = this.props;
+    const {
+      card,
+      isSelectable = true,
+      isSelected = false,
+      isHint = false,
+      showDisabledStyle = true,
+    } = this.props;
 
     this.imgEl.src = card.imagePath;
     this.imgEl.alt = `${card.month}월 ${card.type} 카드`;
@@ -85,7 +92,7 @@ export default class CardComponent {
 
     this.el.classList.toggle(CSS.selectable, isSelectable);
     this.el.classList.toggle(CSS.selected, isSelected);
-    this.el.classList.toggle(CSS.disabled, !isSelectable);
+    this.el.classList.toggle(CSS.disabled, !isSelectable && showDisabledStyle);
     this.el.classList.toggle(CSS.hint, isHint);
 
     this.el.disabled = !isSelectable;

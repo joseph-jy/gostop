@@ -47,6 +47,7 @@ import Controls, { type Difficulty } from './components/Controls';
 import Stats from './components/Stats';
 import { type GameStats, loadStats, saveStats } from '../store/stats';
 import { playSound, preloadSounds, stopAllSounds } from './sound';
+import { shouldShowDisabledStyleForFieldCard } from './field-selection-visual';
 
 const AI_TURN_DELAY = 800;
 const PHASE_TRANSITION_DELAY = 400;
@@ -916,10 +917,16 @@ class Game {
         const isPendingCard = pending && card.id === pending.handCard.id;
         const isChoiceCard = choiceCardIds.has(card.id);
         const isHint = !isChoicePhase && playerHandMonths.has(card.month);
+        const showDisabledStyle = shouldShowDisabledStyleForFieldCard({
+          isChoicePhase,
+          isChoiceCard,
+          isHint,
+        });
 
         const comp = new CardComponent({
           card,
           isSelectable: isChoiceCard,
+          showDisabledStyle,
           isHint: isChoiceCard || isHint,
           onClick: isChoiceCard ? (c) => this.handleFieldCardChoice(c) : undefined,
         });

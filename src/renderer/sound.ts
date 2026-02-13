@@ -9,14 +9,14 @@ export type GameEvent =
   | 'lose';
 
 const SOUND_MAP: Record<GameEvent, string> = {
-  'card-deal': 'assets/sounds/card-deal.mp3',
-  'card-place': 'assets/sounds/card-place.mp3',
-  'card-match': 'assets/sounds/card-match.mp3',
-  'combo': 'assets/sounds/combo.mp3',
-  'go': 'assets/sounds/go.mp3',
-  'stop': 'assets/sounds/stop.mp3',
-  'win': 'assets/sounds/win.mp3',
-  'lose': 'assets/sounds/lose.mp3',
+  'card-deal': 'assets/sounds/cards-pack-open-1.ogg',
+  'card-place': 'assets/sounds/card-place-2.ogg',
+  'card-match': 'assets/sounds/card-slide-4.ogg',
+  'combo': 'assets/sounds/chips-collide-4.ogg',
+  'go': 'assets/sounds/chip-lay-3.ogg',
+  'stop': 'assets/sounds/chip-lay-1.ogg',
+  'win': 'assets/sounds/chips-stack-6.ogg',
+  'lose': 'assets/sounds/chips-handle-3.ogg',
 };
 
 const DEFAULT_VOLUME = 0.15;

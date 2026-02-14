@@ -9,3 +9,4 @@ coverage/
 HANDOFF.md
 test-results/
 playwright-report/
+.sisyphus/
